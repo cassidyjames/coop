@@ -62,26 +62,37 @@ jobs:
         run: ${{ github.workspace }}/mdbook-bin/mdbook build docs
 
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: docs/book
-          target-folder: ${{ steps.deploy-path.outputs.path }}
-
-      - name: Checkout gh-pages for index generation
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages-content
-
-      - name: Generate version index
-        working-directory: gh-pages-content
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p ../index-deploy
-          tree -d -L 1 -H . -T "Coop Documentation" -o ../index-deploy/index.html --noreport
+          DEPLOY_PATH="${{ steps.deploy-path.outputs.path }}"
 
-      - name: Deploy root index
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: index-deploy
-          target-folder: .
-          clean: false
+          # Clone the gh-pages branch, or initialize it if this is the first deployment
+          if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
+            git clone --depth=1 --single-branch --branch gh-pages \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+              _gh-pages
+          else
+            mkdir _gh-pages
+            git -C _gh-pages init
+            git -C _gh-pages checkout --orphan gh-pages
+            git -C _gh-pages remote add origin \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          fi
+
+          touch _gh-pages/.nojekyll
+
+          # Deploy the versioned docs
+          rm -rf "_gh-pages/${DEPLOY_PATH}"
+          cp -r docs/book "_gh-pages/${DEPLOY_PATH}"
+
+          # Regenerate the root version index
+          (cd _gh-pages && tree -d -L 1 -H . -T "Coop Documentation" -o index.html --noreport)
+
+          # Commit and push
+          git -C _gh-pages config user.name "github-actions[bot]"
+          git -C _gh-pages config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C _gh-pages add --all
+          git -C _gh-pages diff --staged --quiet || \
+            git -C _gh-pages commit --message "Deploy docs: ${DEPLOY_PATH}"
+          git -C _gh-pages push origin gh-pages
