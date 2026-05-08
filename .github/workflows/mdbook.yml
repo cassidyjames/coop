@@ -10,8 +10,15 @@ on:
     tags:
       - '[0-9]*'
 
-  # Allows you to run this workflow manually from the Actions tab (supports --ref for backfilling tags)
+  # Allows you to run this workflow manually from the Actions tab.
+  # To backfill an old version, pass the tag as the `ref` input so the new
+  # workflow file runs from main but checks out docs from the specified tag.
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag to build and deploy docs from (e.g. 0.1); leave empty for latest main'
+        required: false
+        type: string
 
 # Write access needed to push to the gh-pages branch
 permissions:
@@ -30,12 +37,19 @@ jobs:
       MDBOOK_VERSION: 0.5.2
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Determine deployment path
         id: deploy-path
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            echo "path=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          # For manual backfill, use the input ref; otherwise derive from the triggering ref
+          DEPLOY_REF="${{ inputs.ref }}"
+          if [[ -z "$DEPLOY_REF" ]]; then
+            DEPLOY_REF="$GITHUB_REF_NAME"
+          fi
+          if [[ "$GITHUB_REF_TYPE" == "tag" || "$DEPLOY_REF" =~ ^[0-9] ]]; then
+            echo "path=$DEPLOY_REF" >> "$GITHUB_OUTPUT"
           else
             echo "path=latest" >> "$GITHUB_OUTPUT"
           fi
