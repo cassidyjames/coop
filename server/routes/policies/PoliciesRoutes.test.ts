@@ -6,39 +6,31 @@ import createPolicy from '../../test/fixtureHelpers/createPolicy.js';
 import { makeMockedServer } from '../../test/setupMockedServer.js';
 
 describe('GET policies', () => {
-  const orgId = uid(),
-    policyId1 = uid(),
-    policyId2 = uid();
+  const orgId = uid();
 
   let request: Awaited<ReturnType<typeof makeMockedServer>>['request'],
     shutdown: Awaited<ReturnType<typeof makeMockedServer>>['shutdown'],
     apiKey: Awaited<ReturnType<typeof createOrg>>['apiKey'],
-    models: Dependencies['Sequelize'],
+    orgCleanup: Awaited<ReturnType<typeof createOrg>>['cleanup'],
     ModerationConfigService: Dependencies['ModerationConfigService'],
-    ApiKeyService: Dependencies['ApiKeyService'];
+    ApiKeyService: Dependencies['ApiKeyService'],
+    KyselyPg: Dependencies['KyselyPg'];
 
   beforeAll(async () => {
     ({
       request,
       shutdown,
-      deps: { Sequelize: models, ModerationConfigService, ApiKeyService },
+      deps: { ModerationConfigService, ApiKeyService, KyselyPg },
     } = await makeMockedServer());
 
-    const { Org } = models;
-
-    ({ apiKey } = await createOrg(
-      { Org },
-      ModerationConfigService,
-      ApiKeyService,
+    ({ apiKey, cleanup: orgCleanup } = await createOrg(
+      { KyselyPg, ModerationConfigService, ApiKeyService },
       orgId,
     ));
   });
 
   afterAll(async () => {
-    const { Org, Policy } = models;
-    await Policy.destroy({ where: { id: policyId1 } });
-    await Policy.destroy({ where: { id: policyId2 } });
-    await Org.destroy({ where: { id: orgId } });
+    await orgCleanup();
     await shutdown();
   });
 

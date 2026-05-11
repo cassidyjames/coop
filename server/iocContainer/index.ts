@@ -3,13 +3,12 @@ import { createRequire } from 'module';
 import Bottle from '@ethanresnick/bottlejs';
 import opentelemetry from '@opentelemetry/api';
 import { makeDateString, type ItemIdentifier } from '@roostorg/types';
-import { types as scyllaTypes } from 'cassandra-driver';
-import IORedis, { type Cluster } from 'ioredis';
 import {
-  Kysely,
-  PostgresDialect,
-  type PostgresCursorConstructor,
-} from 'kysely';
+  types as scyllaTypes,
+  type Host as ScyllaHost,
+} from 'cassandra-driver';
+import IORedis, { type Cluster } from 'ioredis';
+import { Kysely, PostgresDialect } from 'kysely';
 import _ from 'lodash';
 import { DynamicPool } from 'node-worker-threads-pool';
 import pg from 'pg';
@@ -17,7 +16,6 @@ import Cursor from 'pg-cursor';
 import { type JsonObject, type ReadonlyDeep } from 'type-fest';
 import { v1 as uuidv1 } from 'uuid';
 
-import makeDb from '../models/index.js';
 import type { IActionExecutionsAdapter } from '../plugins/warehouse/queries/IActionExecutionsAdapter.js';
 import type { IActionStatisticsAdapter } from '../plugins/warehouse/queries/IActionStatisticsAdapter.js';
 import type { IContentApiRequestsAdapter } from '../plugins/warehouse/queries/IContentApiRequestsAdapter.js';
@@ -36,10 +34,6 @@ import {
   makeItemSubmissionBulkWrite,
   type ItemSubmissionBulkWrite,
 } from '../queues/itemSubmissionQueue.js';
-import {
-  getPolicyActionPenaltiesForOrg,
-  type PolicyActionPenalties,
-} from '../services/policyActionPenalties.js';
 import makeActionPublisher, {
   type ActionPublisher,
   type ActionTargetItem,
@@ -174,6 +168,10 @@ import {
   type PlacesApiService,
 } from '../services/placesApiService/index.js';
 import {
+  getPolicyActionPenaltiesForOrg,
+  type PolicyActionPenalties,
+} from '../services/policyActionPenalties.js';
+import {
   makeReportingService,
   type ReportingService,
 } from '../services/reportingService/index.js';
@@ -234,6 +232,7 @@ import {
 } from '../utils/correlationIds.js';
 import { getUsableCoreCount } from '../utils/cpu-helpers.js';
 import { jsonStringify, type JsonOf } from '../utils/encoding.js';
+import { logErrorJson, logJson } from '../utils/logging.js';
 import { __throw, assertUnreachable } from '../utils/misc.js';
 import SafeTracer from '../utils/SafeTracer.js';
 import {
@@ -244,7 +243,7 @@ import {
 } from '../utils/typescript-types.js';
 import { registerGqlDataSources } from './services/gqlDataSources.js';
 import { registerWorkersAndJobs } from './services/workersAndJobs.js';
-import { register, safeGetEnvVar } from './utils.js';
+import { isEnvTrue, register, safeGetEnvVar } from './utils.js';
 
 // the otel instrumentation currently intercepts require statements. support for
 // esm support is experimental so we should wait until it is stable
@@ -310,16 +309,10 @@ export interface Dependencies {
   // that each dependent service can type its arg more specifically with the set
   // of tables it is responsible for / allowed to query.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Scylla: Scylla<any> & { close: () => Promise<void> };
-
-  Sequelize: ReturnType<typeof makeDb>;
-  OrgModel: ReturnType<typeof makeDb>['Org'];
-  RuleModel: ReturnType<typeof makeDb>['Rule'];
-  ActionModel: ReturnType<typeof makeDb>['Action'];
-  PolicyModel: ReturnType<typeof makeDb>['Policy'];
-  ItemTypeModel: ReturnType<typeof makeDb>['ItemType'];
-  LocationBankModel: ReturnType<typeof makeDb>['LocationBank'];
-  LocationBankLocationModel: ReturnType<typeof makeDb>['LocationBankLocation'];
+  Scylla: Scylla<any> & {
+    connect: () => Promise<void>;
+    close: () => Promise<void>;
+  };
 
   // Data Warehouse abstraction
   DataWarehouse: IDataWarehouse;
@@ -438,6 +431,25 @@ export type PublicInterface<T extends object> = { [K in keyof T]: T[K] };
  * copies of the container as needed for selective rebinding.
  */
 export default async function getBottle() {
+  // Pool / client tuning shared by both Kysely pools. Defaults preserve our
+  // pre-Kysely behavior; env var names are generic.
+  const getPgPoolTuning = () => ({
+    // pg's default is 10s, which churns connections during quiet periods.
+    idleTimeoutMillis: parseInt(
+      process.env.DATABASE_POOL_IDLE_TIMEOUT_MS ?? '300000',
+    ),
+    // pg's default is 0 (wait forever); fail fast if the db is unreachable.
+    connectionTimeoutMillis: parseInt(
+      process.env.DATABASE_POOL_CONNECTION_TIMEOUT_MS ?? '15000',
+    ),
+    // Bound long-running queries instead of letting them hold a pool slot.
+    query_timeout: parseInt(process.env.DATABASE_QUERY_TIMEOUT_MS ?? '1000000'),
+    // Kill sessions sitting idle inside an open transaction (holding locks).
+    idle_in_transaction_session_timeout: parseInt(
+      process.env.DATABASE_IDLE_IN_TRANSACTION_TIMEOUT_MS ?? '300000',
+    ),
+  });
+
   // NB: this is a function because safeGetEnvVar can throw, so we only want to
   // try to look up the env vars (and throw if they're missing) _if someone
   // actually tries to fetch a service from bottle that needs these env vars_.
@@ -453,10 +465,20 @@ export default async function getBottle() {
     password: safeGetEnvVar('DATABASE_PASSWORD'),
     port: parseInt(process.env.DATABASE_PORT ?? '5432'),
     host: safeGetEnvVar('DATABASE_HOST'),
-    max: 30,
+    max: parseInt(process.env.DATABASE_POOL_MAX ?? '30'),
     application_name:
       getEnvVarOrWarn('OTEL_SERVICE_NAME') ?? 'unknown-coop-service',
+    ssl: isEnvTrue('DATABASE_SSL') ? { rejectUnauthorized: false } : undefined,
+    ...getPgPoolTuning(),
   });
+
+  // Kysely's default is `['error']`; opt-in to also logging every executed
+  // query (SQL, bound params, duration).
+  const kyselyLogLevels: ReadonlyArray<'query' | 'error'> = isEnvTrue(
+    'DATABASE_PRINT_LOGS',
+  )
+    ? ['query', 'error']
+    : ['error'];
 
   const bottle = new Bottle<Dependencies>();
 
@@ -468,16 +490,15 @@ export default async function getBottle() {
   //
   // - KyselyPgReadReplica gives us the same type safety, but sends queries to our
   //   replicas, for when we only need reads and we're ok w/ eventual consistency.
-  //
-  // - 'Sequelize' + the sequelize models are used to query pg through sequelize.
   bottle.factory(
     'KyselyPg',
     () =>
       new Kysely<CombinedPg>({
         dialect: new PostgresDialect({
           pool: new pg.Pool(getPgMasterConnectionInfo()),
-          cursor: Cursor as unknown as PostgresCursorConstructor,
+          cursor: Cursor,
         }),
+        log: kyselyLogLevels,
       }),
   );
 
@@ -488,11 +509,12 @@ export default async function getBottle() {
         dialect: new PostgresDialect({
           pool: new pg.Pool({
             ...getPgMasterConnectionInfo(),
-            max: 150,
+            max: parseInt(process.env.DATABASE_READ_POOL_MAX ?? '150'),
             host: safeGetEnvVar('DATABASE_READ_ONLY_HOST'),
           }),
-          cursor: Cursor as unknown as PostgresCursorConstructor,
+          cursor: Cursor,
         }),
+        log: kyselyLogLevels,
       }),
   );
 
@@ -525,22 +547,10 @@ export default async function getBottle() {
           maxRetriesPerRequest: null,
           port: parseInt(process.env.REDIS_PORT ?? '6379'),
           host: safeGetEnvVar('REDIS_HOST'),
+          ...(isEnvTrue('REDIS_TLS')
+            ? { tls: { servername: safeGetEnvVar('REDIS_HOST') } }
+            : {}),
         }),
-  );
-
-  bottle.factory('Sequelize', () => makeDb());
-  bottle.factory('OrgModel', ({ Sequelize }) => Sequelize.Org);
-  bottle.factory('RuleModel', ({ Sequelize }) => Sequelize.Rule);
-  bottle.factory('ActionModel', ({ Sequelize }) => Sequelize.Action);
-  bottle.factory('PolicyModel', ({ Sequelize }) => Sequelize.Policy);
-  bottle.factory('ItemTypeModel', ({ Sequelize }) => Sequelize.ItemType);
-  bottle.factory(
-    'LocationBankModel',
-    ({ Sequelize }) => Sequelize.LocationBank,
-  );
-  bottle.factory(
-    'LocationBankLocationModel',
-    ({ Sequelize }) => Sequelize.LocationBankLocation,
   );
 
   // Data Warehouse abstraction layer
@@ -675,16 +685,32 @@ export default async function getBottle() {
   // keyspace aware and it's very annoying and likely error prone to be
   // switching keyspaces with `USE KEYSPACE` all the time.
   bottle.factory('Scylla', () => {
+    const contactPoints = safeGetEnvVar('SCYLLA_HOSTS')
+      .split(',')
+      .map((it) => it.trim())
+      .filter((it) => it.length > 0);
+    // For TLS hostname verification we need an SNI value that matches the
+    // server cert. Prefer an explicit `SCYLLA_SSL_SERVERNAME` (e.g., the
+    // Keyspaces regional endpoint) over inferring one from `SCYLLA_HOSTS`,
+    // which may contain multiple contact points with different cert names.
+    const sslServerName = process.env.SCYLLA_SSL_SERVERNAME ?? contactPoints[0];
     const scyllaDriver = new ScyllaClient({
-      contactPoints: safeGetEnvVar('SCYLLA_HOSTS')
-        .split(',')
-        .map((it) => it.trim()),
+      contactPoints,
       credentials: {
         username: safeGetEnvVar('SCYLLA_USERNAME'),
         password: safeGetEnvVar('SCYLLA_PASSWORD'),
       },
       localDataCenter: safeGetEnvVar('SCYLLA_LOCAL_DATACENTER'),
       keyspace: 'item_investigation_service',
+      protocolOptions: {
+        port: parseInt(process.env.SCYLLA_PORT ?? '9042'),
+      },
+      sslOptions: isEnvTrue('SCYLLA_SSL')
+        ? {
+            host: sslServerName,
+            rejectUnauthorized: true,
+          }
+        : undefined,
       pooling: {
         coreConnectionsPerHost: {
           [scyllaTypes.distance.local]: 3,
@@ -702,9 +728,61 @@ export default async function getBottle() {
         consistency: scyllaTypes.consistencies.localQuorum,
       },
     });
+
+    // Surface cluster state changes so reconnect storms are visible in logs.
+    scyllaDriver.on('hostUp', (host: ScyllaHost) => {
+      // eslint-disable-next-line no-restricted-syntax
+      logJson(`scylla.hostUp address=${host.address}`);
+    });
+    scyllaDriver.on('hostDown', (host: ScyllaHost) => {
+      // eslint-disable-next-line no-restricted-syntax
+      logJson(`scylla.hostDown address=${host.address}`);
+    });
+    // Forward driver-internal warnings/errors (auth, TLS, connection drops,
+    // etc.); skip the very chatty `info`/`verbose` levels.
+    scyllaDriver.on(
+      'log',
+      (
+        level: 'verbose' | 'info' | 'warning' | 'error',
+        source: string,
+        message: string,
+        furtherInfo?: unknown,
+      ) => {
+        if (level !== 'warning' && level !== 'error') {
+          return;
+        }
+        const wrapped = new Error(`scylla.${level}: [${source}] ${message}`);
+        if (furtherInfo instanceof Error) {
+          wrapped.stack = furtherInfo.stack ?? wrapped.stack;
+        }
+        // eslint-disable-next-line no-restricted-syntax
+        logErrorJson({
+          message: `scylla.driver.${level}`,
+          error: wrapped,
+        });
+      },
+    );
+
+    // cassandra-driver leaks ~4 HostMap listeners per failed `Client._connect()`
+    // retry and never recreates the HostMap, so the default cap of 10 trips
+    // after ~3 failures. Raise it so transient blips don't spam the warning,
+    // but keep it bounded so a true runaway is still noticeable.
+    const controlConnection = (
+      scyllaDriver as unknown as {
+        controlConnection?: {
+          hosts?: { setMaxListeners?: (n: number) => void };
+        };
+      }
+    ).controlConnection;
+    controlConnection?.hosts?.setMaxListeners?.(15);
+
     class ClosableScylla<
       DB extends Record<string, Record<string, unknown>>,
     > extends Scylla<DB> {
+      /** Eagerly connect; idempotent once `connected` is true. */
+      async connect() {
+        return scyllaDriver.connect();
+      }
       async close() {
         return scyllaDriver.shutdown();
       }
@@ -1195,7 +1273,7 @@ export default async function getBottle() {
                     ...{
                       reportIds:
                         'reportIds' in job.payload
-                          ? job.payload.reportIds ?? []
+                          ? (job.payload.reportIds ?? [])
                           : [],
                     },
                     ...('reportedForReason' in job.payload
@@ -1335,10 +1413,7 @@ export default async function getBottle() {
 
       return cached({
         async producer(orgId) {
-          return getPolicyActionPenaltiesForOrg(
-            moderationConfigService,
-            orgId,
-          );
+          return getPolicyActionPenaltiesForOrg(moderationConfigService, orgId);
         },
         directives: { freshUntilAge: 60 },
       });
@@ -1522,18 +1597,8 @@ export default async function getBottle() {
                 }[CloseMethodName];
               }[keyof Dependencies]
             >,
-            // Seqelize puts a close method on each model, but we only need to
-            // close the root sequelize instance.
-            | 'OrgModel'
-            | 'PolicyModel'
-            | 'RuleModel'
-            | 'ActionModel'
-            | 'ItemTypeModel'
-            | 'LocationBankModel'
-            | 'LocationBankLocationModel'
             // Services that don't need cleanup
-            | 'UserStatisticsService'
-            | 'HMAHashBankService'
+            'UserStatisticsService' | 'HMAHashBankService'
           >;
 
           // This will be a type error if we forgot to close something.
@@ -1549,7 +1614,6 @@ export default async function getBottle() {
             'Scylla',
             'itemSubmissionQueueBulkWrite',
             'itemSubmissionRetryQueueBulkWrite',
-            'Sequelize',
             'IORedis',
             // Storage abstractions
             'DataWarehouse',

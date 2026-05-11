@@ -1,12 +1,12 @@
 /* eslint-disable max-lines */
 import _ from 'lodash';
 
+import { itemSubmissionWithTypeIdentifierToItemSubmission } from '../../services/itemProcessingService/index.js';
+import { NCMECIncidentType as NCMECIncidentTypeValues } from '../../services/ncmecService/index.js';
 import {
   getPermissionsForRole,
   UserPermission,
-} from '../../models/types/permissioning.js';
-import { itemSubmissionWithTypeIdentifierToItemSubmission } from '../../services/itemProcessingService/index.js';
-import { NCMECIncidentType as NCMECIncidentTypeValues } from '../../services/ncmecService/index.js';
+} from '../../services/userManagementService/index.js';
 import {
   asyncIterableToArray,
   filterNullOrUndefined,
@@ -38,9 +38,9 @@ import {
   type GQLUserManualReviewJobPayloadResolvers,
 } from '../generated.js';
 import { formatItemSubmissionForGQL } from '../types.js';
+import { forbiddenError, unauthenticatedError } from '../utils/errors.js';
 import { gqlErrorResult, gqlSuccessResult } from '../utils/gqlResult.js';
 import { oneOfInputToTaggedUnion } from '../utils/inputHelpers.js';
-import { forbiddenError, unauthenticatedError } from '../utils/errors.js';
 
 const { omit, sumBy } = _;
 
@@ -101,7 +101,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   union ManualReviewJobEnqueueSourceInfo =
-      ReportEnqueueSourceInfo
+    | ReportEnqueueSourceInfo
     | RuleExecutionEnqueueSourceInfo
     | MrtJobEnqueueSourceInfo
     | PostActionsEnqueueSourceInfo
@@ -202,7 +202,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   union ManualReviewJobPayload =
-      ContentManualReviewJobPayload
+    | ContentManualReviewJobPayload
     | UserManualReviewJobPayload
     | ThreadManualReviewJobPayload
     | NcmecManualReviewJobPayload
@@ -335,7 +335,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   union SubmitDecisionResponse =
-      SubmitDecisionSuccessResponse
+    | SubmitDecisionSuccessResponse
     | JobHasAlreadyBeenSubmittedError
     | SubmittedJobActionNotFoundError
     | NoJobWithIdInQueueError
@@ -363,11 +363,11 @@ const typeDefs = /* GraphQL */ `
   }
 
   union CreateManualReviewQueueResponse =
-      MutateManualReviewQueueSuccessResponse
+    | MutateManualReviewQueueSuccessResponse
     | ManualReviewQueueNameExistsError
 
   union UpdateManualReviewQueueQueueResponse =
-      MutateManualReviewQueueSuccessResponse
+    | MutateManualReviewQueueSuccessResponse
     | ManualReviewQueueNameExistsError
     | NotFoundError
 
@@ -405,10 +405,10 @@ const typeDefs = /* GraphQL */ `
   }
 
   union AddAccessibleQueuesToUserResponse =
-      MutateAccessibleQueuesForUserSuccessResponse
+    | MutateAccessibleQueuesForUserSuccessResponse
 
   union RemoveAccessibleQueuesToUserResponse =
-      MutateAccessibleQueuesForUserSuccessResponse
+    | MutateAccessibleQueuesForUserSuccessResponse
     | NotFoundError
 
   type DeleteAllJobsFromQueueSuccessResponse {
@@ -425,7 +425,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   union DeleteAllJobsFromQueueResponse =
-      DeleteAllJobsFromQueueSuccessResponse
+    | DeleteAllJobsFromQueueSuccessResponse
     | DeleteAllJobsUnauthorizedError
 
   enum MetricsTimeDivisionOptions {
@@ -674,7 +674,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   union ManualReviewChartSettings =
-      GetDecisionCountSettings
+    | GetDecisionCountSettings
     | GetJobCreationCountSettings
 
   input ManualReviewChartSettingsInput {
@@ -742,7 +742,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   union ManualReviewDecisionComponent =
-      IgnoreDecisionComponent
+    | IgnoreDecisionComponent
     | UserOrRelatedActionDecisionComponent
     | SubmitNCMECReportDecisionComponent
     | TransformJobAndRecreateInQueueDecisionComponent
@@ -828,7 +828,7 @@ const typeDefs = /* GraphQL */ `
 
   type ManualReviewJobComment {
     id: ID!
-    author: User!
+    author: User
     commentText: String!
     createdAt: DateTime!
   }
@@ -856,7 +856,7 @@ const typeDefs = /* GraphQL */ `
     comment: ManualReviewJobComment!
   }
   union AddManualReviewJobCommentResponse =
-      AddManualReviewJobCommentSuccessResponse
+    | AddManualReviewJobCommentSuccessResponse
     | NotFoundError
 
   type ManualReviewJobWithDecisions {
@@ -1019,8 +1019,11 @@ const ContentManualReviewJobPayload: GQLContentManualReviewJobPayloadResolvers =
         throw new Error('Invalid item type in content item type resolver');
       }
 
-      const itemSubmission = itemSubmissionWithTypeIdentifierToItemSubmission(it.item, type);
-      
+      const itemSubmission = itemSubmissionWithTypeIdentifierToItemSubmission(
+        it.item,
+        type,
+      );
+
       // Matched banks are now stored directly in the item data during submission
       return formatItemSubmissionForGQL(itemSubmission);
     },
@@ -1102,17 +1105,17 @@ const ContentManualReviewJobPayload: GQLContentManualReviewJobPayloadResolvers =
         case 'REPORT':
         case 'POST_ACTIONS':
           return { kind: enqueueSourceInfo.kind };
-        case 'RULE_EXECUTION':
-          const org = await context.dataSources.orgAPI.getGraphQLOrgFromId(
+        case 'RULE_EXECUTION': {
+          const rules = await context.dataSources.ruleAPI.getGraphQLRulesForOrg(
             user.orgId,
           );
-          const rules = await org.getRules();
           return {
             kind: enqueueSourceInfo.kind,
             rules: rules.filter((rule) =>
               enqueueSourceInfo.rules.includes(rule.id),
             ),
           };
+        }
         default:
           assertUnreachable(enqueueSourceInfo);
       }
@@ -1318,17 +1321,17 @@ const UserManualReviewJobPayload: GQLUserManualReviewJobPayloadResolvers = {
       case 'REPORT':
       case 'POST_ACTIONS':
         return { kind: enqueueSourceInfo.kind };
-      case 'RULE_EXECUTION':
-        const org = await context.dataSources.orgAPI.getGraphQLOrgFromId(
+      case 'RULE_EXECUTION': {
+        const rules = await context.dataSources.ruleAPI.getGraphQLRulesForOrg(
           user.orgId,
         );
-        const rules = await org.getRules();
         return {
           kind: enqueueSourceInfo.kind,
           rules: rules.filter((rule) =>
             enqueueSourceInfo.rules.includes(rule.id),
           ),
         };
+      }
       default:
         assertUnreachable(enqueueSourceInfo);
     }
@@ -1487,17 +1490,17 @@ const ThreadManualReviewJobPayload: GQLThreadManualReviewJobPayloadResolvers = {
       case 'REPORT':
       case 'POST_ACTIONS':
         return { kind: enqueueSourceInfo.kind };
-      case 'RULE_EXECUTION':
-        const org = await context.dataSources.orgAPI.getGraphQLOrgFromId(
+      case 'RULE_EXECUTION': {
+        const rules = await context.dataSources.ruleAPI.getGraphQLRulesForOrg(
           user.orgId,
         );
-        const rules = await org.getRules();
         return {
           kind: enqueueSourceInfo.kind,
           rules: rules.filter((rule) =>
             enqueueSourceInfo.rules.includes(rule.id),
           ),
         };
+      }
       default:
         assertUnreachable(enqueueSourceInfo);
     }
@@ -1613,17 +1616,17 @@ const NcmecManualReviewJobPayload: GQLNcmecManualReviewJobPayloadResolvers = {
       case 'REPORT':
       case 'POST_ACTIONS':
         return { kind: enqueueSourceInfo.kind };
-      case 'RULE_EXECUTION':
-        const org = await context.dataSources.orgAPI.getGraphQLOrgFromId(
+      case 'RULE_EXECUTION': {
+        const rules = await context.dataSources.ruleAPI.getGraphQLRulesForOrg(
           user.orgId,
         );
-        const rules = await org.getRules();
         return {
           kind: enqueueSourceInfo.kind,
           rules: rules.filter((rule) =>
             enqueueSourceInfo.rules.includes(rule.id),
           ),
         };
+      }
       default:
         assertUnreachable(enqueueSourceInfo);
     }
@@ -1634,20 +1637,25 @@ const ManualReviewQueue: GQLManualReviewQueueResolvers = {
   async jobs(queue, { ids: jobIds, limit }, context) {
     const { orgId, id: queueId } = queue;
 
-    if (!jobIds) {
+    if (jobIds == null) {
       return context.services.ManualReviewToolService.getAllJobsForQueue({
         orgId,
         queueId,
         limit: limit ?? undefined,
       });
-    } else {
-      return context.services.ManualReviewToolService.getJobsForQueue({
-        orgId,
-        queueId,
-        jobIds,
-        isAppealsQueue: queue.isAppealsQueue,
-      });
     }
+    // Empty array means "filter to no IDs" -> result is always []. Short-circuit
+    // so we don't open a Bull/Redis queue handle per reviewable queue on every
+    // MRT page load before a job has been dequeued.
+    if (jobIds.length === 0) {
+      return [];
+    }
+    return context.services.ManualReviewToolService.getJobsForQueue({
+      orgId,
+      queueId,
+      jobIds,
+      isAppealsQueue: queue.isAppealsQueue,
+    });
   },
   async pendingJobCount(queue, _, context) {
     const { orgId, id: queueId } = queue;
@@ -1702,10 +1710,14 @@ const ManualReviewJobComment: GQLManualReviewJobCommentResolvers = {
       throw new Error('No user found on context');
     }
 
-    return context.dataSources.userAPI.getGraphQLUserFromId({
-      id: comment.authorId,
-      orgId: user.orgId,
-    });
+    try {
+      return await context.dataSources.userAPI.getGraphQLUserFromId({
+        id: comment.authorId,
+        orgId: user.orgId,
+      });
+    } catch {
+      return null;
+    }
   },
 };
 
@@ -1951,20 +1963,20 @@ const Query: GQLQueryResolvers = {
                         actionIds: it.userOrRelatedActionDecision.actionIds,
                       }
                     : it.ignoreDecision
-                    ? { type: 'IGNORE' }
-                    : it.submitNcmecReportDecision
-                    ? { type: 'SUBMIT_NCMEC_REPORT' }
-                    : it.transformJobAndRecreateInQueueDecision
-                    ? { type: 'TRANSFORM_JOB_AND_RECREATE_IN_QUEUE' }
-                    : it.acceptAppealDecision
-                    ? {
-                        type: 'ACCEPT_APPEAL',
-                      }
-                    : it.rejectAppealDecision
-                    ? {
-                        type: 'REJECT_APPEAL',
-                      }
-                    : undefined,
+                      ? { type: 'IGNORE' }
+                      : it.submitNcmecReportDecision
+                        ? { type: 'SUBMIT_NCMEC_REPORT' }
+                        : it.transformJobAndRecreateInQueueDecision
+                          ? { type: 'TRANSFORM_JOB_AND_RECREATE_IN_QUEUE' }
+                          : it.acceptAppealDecision
+                            ? {
+                                type: 'ACCEPT_APPEAL',
+                              }
+                            : it.rejectAppealDecision
+                              ? {
+                                  type: 'REJECT_APPEAL',
+                                }
+                              : undefined,
                 ),
               )
             : undefined,
@@ -2077,20 +2089,20 @@ const Query: GQLQueryResolvers = {
                         actionIds: it.userOrRelatedActionDecision.actionIds,
                       }
                     : it.ignoreDecision
-                    ? { type: 'IGNORE' }
-                    : it.submitNcmecReportDecision
-                    ? { type: 'SUBMIT_NCMEC_REPORT' }
-                    : it.transformJobAndRecreateInQueueDecision
-                    ? { type: 'TRANSFORM_JOB_AND_RECREATE_IN_QUEUE' }
-                    : it.acceptAppealDecision
-                    ? {
-                        type: 'ACCEPT_APPEAL',
-                      }
-                    : it.rejectAppealDecision
-                    ? {
-                        type: 'REJECT_APPEAL',
-                      }
-                    : undefined,
+                      ? { type: 'IGNORE' }
+                      : it.submitNcmecReportDecision
+                        ? { type: 'SUBMIT_NCMEC_REPORT' }
+                        : it.transformJobAndRecreateInQueueDecision
+                          ? { type: 'TRANSFORM_JOB_AND_RECREATE_IN_QUEUE' }
+                          : it.acceptAppealDecision
+                            ? {
+                                type: 'ACCEPT_APPEAL',
+                              }
+                            : it.rejectAppealDecision
+                              ? {
+                                  type: 'REJECT_APPEAL',
+                                }
+                              : undefined,
                 ),
               )
             : undefined,
@@ -2185,7 +2197,8 @@ const Mutation: GQLMutationResolvers = {
             case 'SUBMIT_NCMEC_REPORT':
               return {
                 ...decision,
-                escalateToHighPriority: decision.escalateToHighPriority ?? undefined,
+                escalateToHighPriority:
+                  decision.escalateToHighPriority ?? undefined,
               };
 
             default:
@@ -2523,14 +2536,22 @@ const ManualReviewChartSettings: GQLManualReviewChartSettingsResolvers = {
 };
 
 const NCMECIncidentType = {
-  CHILD_PORNOGRAPHY: NCMECIncidentTypeValues['Child Pornography (possession, manufacture, and distribution)'],
+  CHILD_PORNOGRAPHY:
+    NCMECIncidentTypeValues[
+      'Child Pornography (possession, manufacture, and distribution)'
+    ],
   CHILD_SEX_TRAFFICKING: NCMECIncidentTypeValues['Child Sex Trafficking'],
   CHILD_SEX_TOURISM: NCMECIncidentTypeValues['Child Sex Tourism'],
   CHILD_SEXUAL_MOLESTATION: NCMECIncidentTypeValues['Child Sexual Molestation'],
   MISLEADING_DOMAIN_NAME: NCMECIncidentTypeValues['Misleading Domain Name'],
-  MISLEADING_WORDS_OR_DIGITAL_IMAGES: NCMECIncidentTypeValues['Misleading Words or Digital Images on the Internet'],
-  ONLINE_ENTICEMENT_OF_CHILDREN: NCMECIncidentTypeValues['Online Enticement of Children for Sexual Acts'],
-  UNSOLICITED_OBSCENE_MATERIAL_TO_CHILD: NCMECIncidentTypeValues['Unsolicited Obscene Material Sent to a Child'],
+  MISLEADING_WORDS_OR_DIGITAL_IMAGES:
+    NCMECIncidentTypeValues[
+      'Misleading Words or Digital Images on the Internet'
+    ],
+  ONLINE_ENTICEMENT_OF_CHILDREN:
+    NCMECIncidentTypeValues['Online Enticement of Children for Sexual Acts'],
+  UNSOLICITED_OBSCENE_MATERIAL_TO_CHILD:
+    NCMECIncidentTypeValues['Unsolicited Obscene Material Sent to a Child'],
 };
 
 const resolvers = {

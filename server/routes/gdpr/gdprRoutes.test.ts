@@ -13,24 +13,21 @@ describe('POST /gdrp/delete', () => {
   let request: Awaited<ReturnType<typeof makeMockedServer>>['request'],
     shutdown: Awaited<ReturnType<typeof makeMockedServer>>['shutdown'],
     apiKey: Awaited<ReturnType<typeof createOrg>>['apiKey'],
+    orgCleanup: Awaited<ReturnType<typeof createOrg>>['cleanup'],
     ApiKeyService: Dependencies['ApiKeyService'],
     ModerationConfigService: Dependencies['ModerationConfigService'],
-    models: Dependencies['Sequelize'];
+    KyselyPg: Dependencies['KyselyPg'];
 
   beforeAll(async () => {
     try {
       ({
         request,
         shutdown,
-        deps: { Sequelize: models, ModerationConfigService, ApiKeyService },
+        deps: { ModerationConfigService, ApiKeyService, KyselyPg },
       } = await makeMockedServer());
 
-      const { Org } = models;
-
-      ({ apiKey } = await createOrg(
-        { Org },
-        ModerationConfigService,
-        ApiKeyService,
+      ({ apiKey, cleanup: orgCleanup } = await createOrg(
+        { KyselyPg, ModerationConfigService, ApiKeyService },
         orgId,
       ));
 
@@ -54,8 +51,7 @@ describe('POST /gdrp/delete', () => {
   });
 
   afterAll(async () => {
-    const { Org } = models;
-    await Org.destroy({ where: { id: orgId } });
+    await orgCleanup();
     await shutdown();
   });
 

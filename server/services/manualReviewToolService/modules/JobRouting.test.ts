@@ -3,7 +3,6 @@ import { ScalarTypes } from '@roostorg/types';
 import { uid } from 'uid';
 
 import getBottle from '../../../iocContainer/index.js';
-import { UserPermission } from '../../../models/types/permissioning.js';
 import createContentItemTypes from '../../../test/fixtureHelpers/createContentItemTypes.js';
 import createOrg from '../../../test/fixtureHelpers/createOrg.js';
 import { makeTestWithFixture } from '../../../test/utils.js';
@@ -17,16 +16,18 @@ import {
 import { itemSubmissionToItemSubmissionWithTypeIdentifier } from '../../itemProcessingService/makeItemSubmissionWithTypeIdentifier.js';
 import { toNormalizedItemDataOrErrors } from '../../itemProcessingService/toNormalizedItemDataOrErrors.js';
 import { SignalType } from '../../signalsService/index.js';
+import { UserPermission } from '../../userManagementService/index.js';
 
 describe('JobRouting tests', () => {
   const jobRoutingTestWithFixtures = makeTestWithFixture(async () => {
     const { container } = await getBottle();
-    const { Org } = container.Sequelize;
     const manualReviewToolService = container.ManualReviewToolService;
     const { org, cleanup: orgCleanup } = await createOrg(
-      { Org },
-      container.ModerationConfigService,
-      container.ApiKeyService,
+      {
+        KyselyPg: container.KyselyPg,
+        ModerationConfigService: container.ModerationConfigService,
+        ApiKeyService: container.ApiKeyService,
+      },
       uid(),
     );
     const userId = uid();

@@ -96,7 +96,6 @@
     "pg-cursor": "^2.7.4",
     "pipeline-segment": "^0.0.6",
     "safe-stable-stringify": "^2.4.2",
-    "sequelize": "^6.37.8",
     "size-limited-map": "^2.0.0",
     "stream-json": "^1.8.0",
     "stream-to-async-iterator": "^1.0.0",
@@ -106,8 +105,9 @@
     "uid": "^2.0.1",
     "undici": "^7.24.0",
     "unhomoglyph": "^1.0.6",
-    "uuid": "^8.3.2",
+    "uuid": "^14.0.0",
     "uuid-apikey": "^1.5.3",
+    "validator": "^13.15.35",
     "xml-js": "^1.6.11",
     "yargs": "^17.7.2"
   },
@@ -124,7 +124,6 @@
     "@types/js-yaml": "^4.0.5",
     "@types/stream-json": "^1.7.7",
     "@types/supertest": "^2.0.11",
-    "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
     "copyfiles": "^2.4.1",
@@ -163,6 +162,8 @@
     "@types/express": "$@types/express",
     "@googlemaps/google-maps-services-js@^3.3.16": {
       "retry-axios": "npm:@ethanresnick/retry-axios@2.6.1"
-    }
+    },
+    "uuid": "^14.0.0",
+    "fast-xml-parser": "^5.7.0"
   }
 }

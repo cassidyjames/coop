@@ -13,6 +13,7 @@ import {
 import { GraphQLError } from 'graphql';
 import { gqlErrorResult, gqlSuccessResult } from '../utils/gqlResult.js';
 import { forbiddenError, unauthenticatedError } from '../utils/errors.js';
+import { type Context } from '../resolvers.js';
 
 const typeDefs = /* GraphQL */ `
   type Org {
@@ -199,24 +200,46 @@ const Query: GQLQueryResolvers = {
   },
 };
 
-const Org: GQLOrgResolvers = {
-  async actions(org, _, context) {
-    const user = context.getUser();
-    if (!user || user.orgId !== org.id) {
-      throw unauthenticatedError('User required.');
-    }
+// Narrowed to only the context fields this resolver actually uses, so tests
+// can build a minimal mock without casting. `Context` (the full resolver
+// context) is structurally assignable to this, so production usage is unchanged.
+type ResolveOrgActionsContext = {
+  getUser: () => { orgId: string } | null | undefined;
+  services: {
+    ModerationConfigService: Pick<Context['services']['ModerationConfigService'], 'getActions'>;
+    NcmecService: Pick<Context['services']['NcmecService'], 'hasNCMECReportingEnabled'>;
+  };
+};
 
-    return context.services.ModerationConfigService.getActions({
+export async function resolveOrgActions(
+  org: { id: string },
+  _: unknown,
+  context: ResolveOrgActionsContext,
+) {
+  const user = context.getUser();
+  if (!user || user.orgId !== org.id) {
+    throw unauthenticatedError('User required.');
+  }
+  const [actions, hasNcmecEnabled] = await Promise.all([
+    context.services.ModerationConfigService.getActions({
       orgId: org.id,
       readFromReplica: true,
-    });
-  },
+    }),
+    context.services.NcmecService.hasNCMECReportingEnabled(org.id),
+  ]);
+  return hasNcmecEnabled
+    ? actions
+    : actions.filter((it) => it.actionType !== 'ENQUEUE_TO_NCMEC');
+}
+
+const Org: GQLOrgResolvers = {
+  actions: resolveOrgActions,
   async contentTypes(org, _, context) {
     const user = context.getUser();
     if (!user || user.orgId !== org.id) {
       throw unauthenticatedError('User required.');
     }
-    return org.getContentTypes();
+    return context.dataSources.orgAPI.getContentTypesForOrg(org.id);
   },
   async itemTypes(org, _, context) {
     const user = context.getUser();
@@ -232,7 +255,7 @@ const Org: GQLOrgResolvers = {
     if (!user || user.orgId !== org.id) {
       throw unauthenticatedError('User required.');
     }
-    return org.getUsers();
+    return context.dataSources.orgAPI.getOrgUsersForGraphQL(org.id);
   },
   async pendingInvites(org, _, context): Promise<GQLPendingInvite[]> {
     const user = context.getUser();
@@ -253,7 +276,7 @@ const Org: GQLOrgResolvers = {
     if (!user || user.orgId !== org.id) {
       throw unauthenticatedError('User required.');
     }
-    return org.getRules();
+    return context.dataSources.ruleAPI.getGraphQLRulesForOrg(org.id);
   },
   async routingRules(org, _, context) {
     const user = context.getUser();
@@ -466,10 +489,11 @@ const Org: GQLOrgResolvers = {
       org.id,
     );
   },
-  async usersWhoCanReviewEveryQueue(org, _, __) {
-    return (await org.getUsers()).filter((user) =>
-      user.getPermissions().includes('EDIT_MRT_QUEUES'),
+  async usersWhoCanReviewEveryQueue(org, _, context) {
+    const users = await context.dataSources.orgAPI.getOrgUsersForGraphQL(
+      org.id,
     );
+    return users.filter((u) => u.getPermissions().includes('EDIT_MRT_QUEUES'));
   },
   async defaultInterfacePreferences(org, _, context) {
     const orgDefaults =

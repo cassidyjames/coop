@@ -17,12 +17,11 @@ import { ErrorType } from '../../utils/errors.js';
 import { type Satisfies } from '../../utils/typescript-types.js';
 import { type ModerationConfigServicePg } from './dbTypes.js';
 import {
+  RuleStatus,
+  RuleType,
   type Action,
   type ConditionSet,
   type ItemType,
-  RuleAlarmStatus,
-  RuleStatus,
-  RuleType,
   type Policy,
   type UserItemType,
 } from './index.js';
@@ -75,6 +74,7 @@ describe('ModerationConfigService', () => {
   ] satisfies Policy[];
 
   const dummyOrgId = uid();
+  let dummyOrgCleanup: () => Promise<void>;
   const dummySchema = [
     { name: 'fakeField', type: 'STRING', required: false, container: null },
   ] as const;
@@ -118,24 +118,25 @@ describe('ModerationConfigService', () => {
     );
 
     const createOrgResult = await createOrg(
-      { Org: container.Sequelize.Org },
-      container.ModerationConfigService,
-      container.ApiKeyService,
+      {
+        KyselyPg: container.KyselyPg,
+        ModerationConfigService: container.ModerationConfigService,
+        ApiKeyService: container.ApiKeyService,
+      },
       dummyOrgId,
     );
 
     defaultUserItemType = createOrgResult.defaultUserItemType;
+    dummyOrgCleanup = createOrgResult.cleanup;
     allCreatedItemTypes = [...allCreatedItemTypes, defaultUserItemType];
   });
 
   afterAll(async () => {
-    const { Sequelize: models } = (await getBottle()).container;
-    await models.Org.destroy({ where: { id: dummyOrgId } });
+    await dummyOrgCleanup();
 
     await Promise.all([
       container.KyselyPg.destroy(),
       container.KyselyPgReadReplica.destroy(),
-      await models.close(),
     ]);
   });
 
@@ -193,39 +194,31 @@ describe('ModerationConfigService', () => {
   describe('#getRuleByIdAndOrg', () => {
     const testWithRuleRow = makeTestWithFixture(async () => {
       const { org, cleanup: orgCleanup } = await createOrg(
-        { Org: container.Sequelize.Org },
-        container.ModerationConfigService,
-        container.ApiKeyService,
+        {
+          KyselyPg: container.KyselyPg,
+          ModerationConfigService: container.ModerationConfigService,
+          ApiKeyService: container.ApiKeyService,
+        },
         uid(),
       );
       const { user, cleanup: userCleanup } = await createUser(
-        container.Sequelize,
+        container.KyselyPg,
         org.id,
       );
-      const ruleId = uid();
-      await container.Sequelize.Rule.create({
-        id: ruleId,
-        orgId: org.id,
-        creatorId: user.id,
+      const rule = await createRule(container.KyselyPg, org.id, {
+        creator: user,
         name: 'getRuleByIdAndOrg fixture rule',
-        description: null,
-        status: RuleStatus.DRAFT,
-        statusIfUnexpired: RuleStatus.DRAFT,
-        tags: [],
-        conditionSet: minimalRuleConditionSet,
         ruleType: RuleType.USER,
-        alarmStatus: RuleAlarmStatus.INSUFFICIENT_DATA,
+        status: RuleStatus.DRAFT,
+        conditionSet: minimalRuleConditionSet,
       });
 
       return {
         org,
         user,
-        ruleId,
+        ruleId: rule.id,
         async cleanup() {
-          await container.Sequelize.Rule.destroy({
-            where: { id: ruleId },
-            force: true,
-          });
+          await rule.destroy();
           await userCleanup();
           await orgCleanup();
         },
@@ -248,9 +241,11 @@ describe('ModerationConfigService', () => {
       'returns null when the org id does not match (IDOR guard)',
       async ({ ruleId }) => {
         const { org: otherOrg, cleanup: otherOrgCleanup } = await createOrg(
-          { Org: container.Sequelize.Org },
-          container.ModerationConfigService,
-          container.ApiKeyService,
+          {
+            KyselyPg: container.KyselyPg,
+            ModerationConfigService: container.ModerationConfigService,
+            ApiKeyService: container.ApiKeyService,
+          },
           uid(),
         );
         try {
@@ -515,6 +510,92 @@ describe('ModerationConfigService', () => {
 
   describe('Action-returning methods', () => {
     describe('Creation methods', () => {
+      describe('#upsertBuiltInActions', () => {
+        it('seeds the three built-in (non-CUSTOM_ACTION) rows for the org', async () => {
+          const all = await sutWithPrimary.getActions({ orgId: dummyOrgId });
+          const builtIns = all.filter(
+            (it) => it.actionType !== 'CUSTOM_ACTION',
+          );
+          const types = builtIns.map((it) => it.actionType).sort();
+          expect(types).toEqual(
+            [
+              'ENQUEUE_AUTHOR_TO_MRT',
+              'ENQUEUE_TO_MRT',
+              'ENQUEUE_TO_NCMEC',
+            ].sort(),
+          );
+          for (const action of builtIns) {
+            expect(action.orgId).toBe(dummyOrgId);
+            expect(action).not.toHaveProperty('callbackUrl');
+          }
+        });
+
+        it('is idempotent: calling twice does not create duplicates', async () => {
+          const before = await sutWithPrimary.getActions({
+            orgId: dummyOrgId,
+          });
+          const beforeBuiltIns = before
+            .filter((it) => it.actionType !== 'CUSTOM_ACTION')
+            .map((it) => it.id)
+            .sort();
+          await sutWithPrimary.upsertBuiltInActions(dummyOrgId);
+          const after = await sutWithPrimary.getActions({
+            orgId: dummyOrgId,
+          });
+          const afterBuiltIns = after
+            .filter((it) => it.actionType !== 'CUSTOM_ACTION')
+            .map((it) => it.id)
+            .sort();
+          expect(afterBuiltIns).toEqual(beforeBuiltIns);
+        });
+
+        it('built-ins surface for the appropriate item type kinds', async () => {
+          const fresh = await createOrg(
+            {
+              KyselyPg: container.KyselyPg,
+              ModerationConfigService: container.ModerationConfigService,
+              ApiKeyService: container.ApiKeyService,
+            },
+            uid(),
+          );
+          try {
+            const contentType = await sutWithPrimary.createContentType(
+              fresh.org.id,
+              {
+                schema: dummySchema,
+                description: null,
+                name: faker.random.alphaNumeric(16),
+                schemaFieldRoles: { displayName: 'fakeField' },
+              },
+            );
+
+            const forUser = await sutWithPrimary.getActionsForItemType({
+              orgId: fresh.org.id,
+              itemTypeId: fresh.defaultUserItemType.id,
+              itemTypeKind: 'USER',
+            });
+            expect(forUser.map((it) => it.actionType).sort()).toEqual(
+              ['ENQUEUE_TO_MRT', 'ENQUEUE_TO_NCMEC'].sort(),
+            );
+
+            const forContent = await sutWithPrimary.getActionsForItemType({
+              orgId: fresh.org.id,
+              itemTypeId: contentType.id,
+              itemTypeKind: 'CONTENT',
+            });
+            expect(forContent.map((it) => it.actionType).sort()).toEqual(
+              [
+                'ENQUEUE_AUTHOR_TO_MRT',
+                'ENQUEUE_TO_MRT',
+                'ENQUEUE_TO_NCMEC',
+              ].sort(),
+            );
+          } finally {
+            await fresh.cleanup();
+          }
+        });
+      });
+
       describe('#createAction', () => {
         it('should return and durably save the new action', async () => {
           const saved = await sutWithPrimary.createAction(dummyOrgId, {
@@ -565,13 +646,16 @@ describe('ModerationConfigService', () => {
 
         it('should return all actions, properly formatted', async () => {
           const res = await sutWithPrimary.getActions({ orgId: dummyOrgId });
-          expect(res).toHaveLength(createdActions.length);
-          expect(res).toEqual(expect.arrayContaining(createdActions));
+          const customActions = res.filter(
+            (it) => it.actionType === 'CUSTOM_ACTION',
+          );
+          expect(customActions).toHaveLength(createdActions.length);
+          expect(customActions).toEqual(expect.arrayContaining(createdActions));
         });
 
         it('should round-trip a non-null customMrtApiParams value', async () => {
           const action = await sutWithPrimary.createAction(dummyOrgId, {
-            name: faker.random.alphaNumeric(),
+            name: faker.random.alphaNumeric(16),
             description: null,
             type: 'CUSTOM_ACTION',
             callbackUrl: 'https://example.com',
@@ -579,8 +663,9 @@ describe('ModerationConfigService', () => {
             callbackUrlBody: null,
           });
 
-          // The service create methods don't expose customMrtApiParams,
-          // so set it via raw Kysely to exercise the read mapping.
+          // Legacy shape pre-dating the typed parameter spec — set it via raw
+          // Kysely to verify the read mapping still surfaces older rows
+          // unchanged for back-compat.
           const params = [
             { key: 'foo', value: 'bar' },
             { key: 'baz', value: 'qux' },
@@ -609,6 +694,84 @@ describe('ModerationConfigService', () => {
             });
           }
         });
+
+        it('round-trips typed parameters through createAction', async () => {
+          const parameters = [
+            {
+              name: 'num_days_banned',
+              displayName: 'Days to ban',
+              type: 'NUMBER',
+              required: true,
+              min: 1,
+              max: 365,
+              defaultValue: 7,
+            },
+            {
+              name: 'reason',
+              displayName: 'Reason',
+              type: 'SELECT',
+              required: true,
+              options: [
+                { value: 'spam', label: 'Spam' },
+                { value: 'abuse', label: 'Abuse' },
+              ],
+            },
+            {
+              name: 'notify_user',
+              displayName: 'Notify user',
+              type: 'BOOLEAN',
+              required: false,
+              defaultValue: false,
+            },
+          ];
+
+          const created = await sutWithPrimary.createAction(dummyOrgId, {
+            name: faker.random.alphaNumeric(16),
+            description: null,
+            type: 'CUSTOM_ACTION',
+            callbackUrl: 'https://example.com',
+            callbackUrlHeaders: null,
+            callbackUrlBody: null,
+            parameters,
+          });
+
+          try {
+            const [fetched] = await sutWithPrimary.getActions({
+              orgId: dummyOrgId,
+              ids: [created.id],
+            });
+            expect(fetched.actionType).toBe('CUSTOM_ACTION');
+            const stored = (fetched as { customMrtApiParams: unknown })
+              .customMrtApiParams;
+            expect(stored).toEqual(parameters);
+          } finally {
+            await sutWithPrimary.deleteCustomAction({
+              orgId: dummyOrgId,
+              actionId: created.id,
+            });
+          }
+        });
+
+        it('rejects invalid parameters at create time', async () => {
+          await expect(
+            sutWithPrimary.createAction(dummyOrgId, {
+              name: faker.random.alphaNumeric(16),
+              description: null,
+              type: 'CUSTOM_ACTION',
+              callbackUrl: 'https://example.com',
+              callbackUrlHeaders: null,
+              callbackUrlBody: null,
+              parameters: [
+                {
+                  name: 'invalid name with spaces',
+                  displayName: 'X',
+                  type: 'STRING',
+                  required: false,
+                },
+              ],
+            }),
+          ).rejects.toMatchObject({ status: 400 });
+        });
       });
     });
 
@@ -616,7 +779,7 @@ describe('ModerationConfigService', () => {
       describe('#updateCustomAction', () => {
         const testWithAction = makeTestWithFixture(async () => {
           const action = await sutWithPrimary.createAction(dummyOrgId, {
-            name: faker.random.alphaNumeric(),
+            name: faker.random.alphaNumeric(16),
             description: 'before',
             type: 'CUSTOM_ACTION',
             callbackUrl: 'https://before.example.com',
@@ -684,16 +847,18 @@ describe('ModerationConfigService', () => {
 
             await new Promise((resolve) => setTimeout(resolve, 5));
 
-            const result = await sutWithPrimary.updateCustomAction(
-              dummyOrgId,
-              { actionId: action.id, patch: {} },
-            );
+            const result = await sutWithPrimary.updateCustomAction(dummyOrgId, {
+              actionId: action.id,
+              patch: {},
+            });
 
             const after = await container.KyselyPg.selectFrom('public.actions')
               .select(['updated_at'])
               .where('id', '=', action.id)
               .executeTakeFirstOrThrow();
-            expect(after.updated_at.getTime()).toBe(before.updated_at.getTime());
+            expect(after.updated_at.getTime()).toBe(
+              before.updated_at.getTime(),
+            );
             expect(result.id).toBe(action.id);
           },
         );
@@ -702,9 +867,11 @@ describe('ModerationConfigService', () => {
           'should throw NotFound when called with the wrong org',
           async ({ action }) => {
             const otherOrg = await createOrg(
-              { Org: container.Sequelize.Org },
-              container.ModerationConfigService,
-              container.ApiKeyService,
+              {
+                KyselyPg: container.KyselyPg,
+                ModerationConfigService: container.ModerationConfigService,
+                ApiKeyService: container.ApiKeyService,
+              },
               uid(),
             );
             try {
@@ -730,10 +897,96 @@ describe('ModerationConfigService', () => {
         );
 
         testWithAction(
+          'updates parameters when patch.parameters is supplied',
+          async ({ action }) => {
+            await sutWithPrimary.updateCustomAction(dummyOrgId, {
+              actionId: action.id,
+              patch: {
+                parameters: [
+                  {
+                    name: 'foo',
+                    displayName: 'Foo',
+                    type: 'STRING',
+                    required: false,
+                  },
+                ],
+              },
+            });
+
+            const [afterSet] = await sutWithPrimary.getActions({
+              orgId: dummyOrgId,
+              ids: [action.id],
+            });
+            expect(
+              (afterSet as { customMrtApiParams: unknown }).customMrtApiParams,
+            ).toEqual([
+              {
+                name: 'foo',
+                displayName: 'Foo',
+                type: 'STRING',
+                required: false,
+              },
+            ]);
+
+            // Passing `[]` should clear, not leave the existing list in place.
+            await sutWithPrimary.updateCustomAction(dummyOrgId, {
+              actionId: action.id,
+              patch: { parameters: [] },
+            });
+            const [afterClear] = await sutWithPrimary.getActions({
+              orgId: dummyOrgId,
+              ids: [action.id],
+            });
+            expect(
+              (afterClear as { customMrtApiParams: unknown })
+                .customMrtApiParams,
+            ).toBeNull();
+          },
+        );
+
+        testWithAction(
+          'leaves parameters unchanged when patch.parameters is omitted',
+          async ({ action }) => {
+            await sutWithPrimary.updateCustomAction(dummyOrgId, {
+              actionId: action.id,
+              patch: {
+                parameters: [
+                  {
+                    name: 'foo',
+                    displayName: 'Foo',
+                    type: 'STRING',
+                    required: false,
+                  },
+                ],
+              },
+            });
+            await sutWithPrimary.updateCustomAction(dummyOrgId, {
+              actionId: action.id,
+              patch: { description: 'after' },
+            });
+            const [fetched] = await sutWithPrimary.getActions({
+              orgId: dummyOrgId,
+              ids: [action.id],
+            });
+            expect(fetched.description).toBe('after');
+            expect(
+              (fetched as { customMrtApiParams: unknown }).customMrtApiParams,
+            ).toEqual([
+              {
+                name: 'foo',
+                displayName: 'Foo',
+                type: 'STRING',
+                required: false,
+              },
+            ]);
+          },
+        );
+
+        testWithAction(
           'should reject renaming onto an existing action name',
           async ({ action }) => {
             const other = await sutWithPrimary.createAction(dummyOrgId, {
-              name: faker.random.alphaNumeric(),
+              name: faker.random.alphaNumeric(16),
               description: null,
               type: 'CUSTOM_ACTION',
               callbackUrl: 'https://example.com',
@@ -768,7 +1021,7 @@ describe('ModerationConfigService', () => {
               {
                 schema: dummySchema,
                 description: null,
-                name: faker.random.alphaNumeric(),
+                name: faker.random.alphaNumeric(16),
                 schemaFieldRoles: { displayName: 'fakeField' },
               },
             );
@@ -777,7 +1030,7 @@ describe('ModerationConfigService', () => {
               {
                 schema: dummySchema,
                 description: null,
-                name: faker.random.alphaNumeric(),
+                name: faker.random.alphaNumeric(16),
                 schemaFieldRoles: { displayName: 'fakeField' },
               },
             );
@@ -843,7 +1096,7 @@ describe('ModerationConfigService', () => {
       describe('#deleteCustomAction', () => {
         const testWithAction = makeTestWithFixture(async () => {
           const action = await sutWithPrimary.createAction(dummyOrgId, {
-            name: faker.random.alphaNumeric(),
+            name: faker.random.alphaNumeric(16),
             description: null,
             type: 'CUSTOM_ACTION',
             callbackUrl: 'https://example.com',
@@ -894,9 +1147,11 @@ describe('ModerationConfigService', () => {
           'should return false when called with the wrong org and leave the row intact',
           async ({ action }) => {
             const otherOrg = await createOrg(
-              { Org: container.Sequelize.Org },
-              container.ModerationConfigService,
-              container.ApiKeyService,
+              {
+                KyselyPg: container.KyselyPg,
+                ModerationConfigService: container.ModerationConfigService,
+                ApiKeyService: container.ApiKeyService,
+              },
               uid(),
             );
             try {
@@ -924,15 +1179,13 @@ describe('ModerationConfigService', () => {
               {
                 schema: dummySchema,
                 description: null,
-                name: faker.random.alphaNumeric(),
+                name: faker.random.alphaNumeric(16),
                 schemaFieldRoles: { displayName: 'fakeField' },
               },
             );
-            const rule = await createRule(container.Sequelize, dummyOrgId);
+            const rule = await createRule(container.KyselyPg, dummyOrgId);
 
-            await container.KyselyPg.insertInto(
-              'public.actions_and_item_types',
-            )
+            await container.KyselyPg.insertInto('public.actions_and_item_types')
               .values({ action_id: action.id, item_type_id: itemType.id })
               .execute();
             await container.KyselyPg.insertInto('public.rules_and_actions')
@@ -976,14 +1229,14 @@ describe('ModerationConfigService', () => {
         const itemType = await sutWithPrimary.createContentType(dummyOrgId, {
           schema: dummySchema,
           description: null,
-          name: faker.random.alphaNumeric(),
+          name: faker.random.alphaNumeric(16),
           schemaFieldRoles: { displayName: 'fakeField' },
         });
 
         const viaJunctionAction = await sutWithPrimary.createAction(
           dummyOrgId,
           {
-            name: faker.random.alphaNumeric(),
+            name: faker.random.alphaNumeric(16),
             description: null,
             type: 'CUSTOM_ACTION',
             callbackUrl: 'https://example.com',
@@ -996,7 +1249,7 @@ describe('ModerationConfigService', () => {
         const viaAppliesAllAction = await sutWithPrimary.createAction(
           dummyOrgId,
           {
-            name: faker.random.alphaNumeric(),
+            name: faker.random.alphaNumeric(16),
             description: null,
             type: 'CUSTOM_ACTION',
             callbackUrl: 'https://example.com',
@@ -1011,7 +1264,7 @@ describe('ModerationConfigService', () => {
 
         // Action satisfying both branches; result should still include it once.
         const viaBothAction = await sutWithPrimary.createAction(dummyOrgId, {
-          name: faker.random.alphaNumeric(),
+          name: faker.random.alphaNumeric(16),
           description: null,
           type: 'CUSTOM_ACTION',
           callbackUrl: 'https://example.com',
@@ -1065,8 +1318,11 @@ describe('ModerationConfigService', () => {
             readFromReplica: false,
           });
 
-          const ids = result.map((it) => it.id).sort();
-          expect(ids).toEqual(
+          const customIds = result
+            .filter((it) => it.actionType === 'CUSTOM_ACTION')
+            .map((it) => it.id)
+            .sort();
+          expect(customIds).toEqual(
             [
               viaJunctionAction.id,
               viaAppliesAllAction.id,
@@ -1078,9 +1334,11 @@ describe('ModerationConfigService', () => {
           // applies-to-all rows (they'd otherwise leak across orgs since the
           // ANY(...) predicate alone has no tenant scope).
           const otherOrg = await createOrg(
-            { Org: container.Sequelize.Org },
-            container.ModerationConfigService,
-            container.ApiKeyService,
+            {
+              KyselyPg: container.KyselyPg,
+              ModerationConfigService: container.ModerationConfigService,
+              ApiKeyService: container.ApiKeyService,
+            },
             uid(),
           );
           try {
@@ -1090,7 +1348,9 @@ describe('ModerationConfigService', () => {
               itemTypeKind: 'CONTENT',
               readFromReplica: false,
             });
-            expect(otherResult).toEqual([]);
+            expect(
+              otherResult.filter((it) => it.actionType === 'CUSTOM_ACTION'),
+            ).toEqual([]);
           } finally {
             await otherOrg.cleanup();
           }
@@ -1100,9 +1360,9 @@ describe('ModerationConfigService', () => {
 
     describe('#getActionsForRuleId', () => {
       const testWithRuleAndAction = makeTestWithFixture(async () => {
-        const rule = await createRule(container.Sequelize, dummyOrgId);
+        const rule = await createRule(container.KyselyPg, dummyOrgId);
         const action = await sutWithPrimary.createAction(dummyOrgId, {
-          name: faker.random.alphaNumeric(),
+          name: faker.random.alphaNumeric(16),
           description: null,
           type: 'CUSTOM_ACTION',
           callbackUrl: 'https://example.com',
@@ -1141,9 +1401,11 @@ describe('ModerationConfigService', () => {
         'should not return actions when called with a different org',
         async ({ rule }) => {
           const otherOrg = await createOrg(
-            { Org: container.Sequelize.Org },
-            container.ModerationConfigService,
-            container.ApiKeyService,
+            {
+              KyselyPg: container.KyselyPg,
+              ModerationConfigService: container.ModerationConfigService,
+              ApiKeyService: container.ApiKeyService,
+            },
             uid(),
           );
           try {
@@ -1177,14 +1439,16 @@ describe('ModerationConfigService', () => {
     describe('Mutations', () => {
       const testWithUserAndOrg = makeTestWithFixture(async () => {
         const { org, cleanup: orgCleanup } = await createOrg(
-          { Org: container.Sequelize.Org },
-          container.ModerationConfigService,
-          container.ApiKeyService,
+          {
+            KyselyPg: container.KyselyPg,
+            ModerationConfigService: container.ModerationConfigService,
+            ApiKeyService: container.ApiKeyService,
+          },
           uid(),
         );
 
         const { user, cleanup: userCleanup } = await createUser(
-          container.Sequelize,
+          container.KyselyPg,
           org.id,
         );
 
@@ -1422,7 +1686,7 @@ describe('ModerationConfigService', () => {
       const itemType = await sutWithPrimary.createContentType(dummyOrgId, {
         schema: dummySchema,
         description: null,
-        name: faker.random.alphaNumeric(),
+        name: faker.random.alphaNumeric(16),
         schemaFieldRoles: {
           displayName: 'fakeField',
         },
@@ -1443,7 +1707,7 @@ describe('ModerationConfigService', () => {
       const itemType = await sutWithPrimary.createContentType(dummyOrgId, {
         schema: dummySchema,
         description: null,
-        name: faker.random.alphaNumeric(),
+        name: faker.random.alphaNumeric(16),
         schemaFieldRoles: {
           displayName: 'fakeField',
         },
@@ -1451,7 +1715,7 @@ describe('ModerationConfigService', () => {
 
       const newItemType = await sutWithPrimary.updateContentType(dummyOrgId, {
         id: itemType.id,
-        name: faker.random.alphaNumeric(),
+        name: faker.random.alphaNumeric(16),
         schemaFieldRoles: {
           creatorId: undefined,
         },
@@ -1528,7 +1792,7 @@ describe('ModerationConfigService', () => {
       async ({ itemType }) => {
         await sutWithPrimary.updateContentType(dummyOrgId, {
           id: itemType.id,
-          name: faker.random.alphaNumeric(),
+          name: faker.random.alphaNumeric(16),
           schemaFieldRoles: {
             creatorId: undefined,
           },

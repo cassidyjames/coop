@@ -31,9 +31,9 @@ We're developing Coop in the open and want to hear from you! Whether you're test
 * **Utility Services**: Database migrators, instrumentation, and proxy layers.  
 
 ## Getting Started
-For development on Coop it is recommended to:
+For deploying a Coop instance it is recommended to:
 
-- use a machine with 16 GiB RAM or more
+- use a machine with 4 GiB RAM or more (at least 8GiB is recommended for running development-related tasks, e.g. linting, tests)
 - use Node 24 (run `nvm install && nvm use` so local matches `.nvmrc`)
 
 and then follow the steps below:
@@ -49,8 +49,12 @@ and then follow the steps below:
    (cd server && npm install)
    (cd db && npm install)
    ```
-3. Make sure the `.env` files for `/server` and `db` are populated (including ClickHouse credentials). Run database migrations:
+3. Make sure the `.env` files for `/server` and `db` are populated (including ClickHouse credentials). Create databases and run migrations:
    ```bash
+   npm run db:create -- --env staging --db api-server-pg
+   npm run db:create -- --env staging --db scylla
+   npm run db:create -- --env staging --db clickhouse
+
    npm run db:update -- --env staging --db api-server-pg
    npm run db:update -- --env staging --db scylla
    npm run db:update -- --env staging --db clickhouse
@@ -77,6 +81,8 @@ npm install \
 5. Create an organization and admin user:
 ```bash
    npm run create-org
+
+6. Run `cd server && npm run copy-assets`
 ```
    
 Use the credentials provided to log in at `http://localhost:3000`.
@@ -95,6 +101,39 @@ The `server/bin` folder contains utility scripts for managing the Coop server:
 - **Get Invite Token**: Use `npm run get-invite` to retrieve the signup link for a user invited from the UI.
 
 See `server/bin/README.md` for detailed usage instructions and examples.
+
+## Running CI Locally
+
+All PR checks are defined as `docker compose` services to reproduce any CI job locally.
+
+| CI job | Local command |
+| --- | --- |
+| `check_generated_graphql` | `docker compose run --rm codegen-check` |
+| `check_api_server` (lint) | `docker compose run --rm backend npm run lint` |
+| `check_api_server` (build) | `docker compose run --rm backend npm run build` |
+| `run_frontend_checks_if_changed` (lint) | `docker compose run --rm client npm run lint` |
+| `run_frontend_checks_if_changed` (build) | `docker compose run --rm client npm run build` |
+| `check_api_server` (test) | `docker compose run --rm test` |
+
+Run the full suite (stops at first failure):
+
+```bash
+docker compose run --rm codegen-check \
+  && docker compose run --rm backend npm run lint \
+  && docker compose run --rm backend npm run build \
+  && docker compose run --rm client npm run lint \
+  && docker compose run --rm client npm run build \
+  && docker compose run --rm test
+```
+
+Tear down:
+
+```bash
+docker compose down        # stop containers, keep DB volumes
+docker compose down -v     # also drop DB volumes (fresh DBs next run)
+```
+
+`check_migration_order` runs only in GitHub Actions — it's GitHub-specific and not needed locally. When adding a migration, use `date -u +"%Y.%m.%dT%H.%M.%S"` for the filename prefix and CI will pass.
 
 # Code Structure
 
@@ -142,6 +181,8 @@ Built on modern cloud infrastructure with horizontal scaling, caching, and perfo
 ## Deployment
 
 For historical reference, AWS infrastructure code (CDK, Helm charts, Pulumi, CDKTF) that was previously used for production deployments is available on the [`0.1` branch](https://github.com/roostorg/coop/tree/0.1/.devops). That infrastructure code may have drifted from the current application architecture and is no longer maintained, but can serve as a reference for your own deployment.
+
+**IMPORTANT** When you run migrations we create a sample org which contains users with default passwords. Make sure you clean up on production environment
 
 ## Documentation
 

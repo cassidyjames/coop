@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { faker } from '@faker-js/faker';
 
-import { type Dependencies } from '../../iocContainer/index.js';
 import createOrg from '../../test/fixtureHelpers/createOrg.js';
+import createUser from '../../test/fixtureHelpers/createUser.js';
 import { makeMockedServer } from '../../test/setupMockedServer.js';
 
 describe('POST Report', () => {
@@ -13,26 +13,24 @@ describe('POST Report', () => {
   let userTypeId: string;
   let threadTypeId: string;
 
-  let models: Dependencies['Sequelize'],
-    deps: Awaited<ReturnType<typeof makeMockedServer>>['deps'],
+  let deps: Awaited<ReturnType<typeof makeMockedServer>>['deps'],
     request: Awaited<ReturnType<typeof makeMockedServer>>['request'],
     shutdown: Awaited<ReturnType<typeof makeMockedServer>>['shutdown'],
-    apiKey: Awaited<ReturnType<typeof createOrg>>['apiKey'];
+    apiKey: Awaited<ReturnType<typeof createOrg>>['apiKey'],
+    orgCleanup: Awaited<ReturnType<typeof createOrg>>['cleanup'],
+    userCleanup: Awaited<ReturnType<typeof createUser>>['cleanup'];
 
-  const getBulkWriteMock = () =>
-    deps.DataWarehouseAnalytics.bulkWrite as jest.MockedFunction<
-      Dependencies['DataWarehouseAnalytics']['bulkWrite']
-    >;
+  const getBulkWriteMock = () => deps.DataWarehouseAnalytics.bulkWrite;
 
   beforeAll(async () => {
     ({ deps, request, shutdown } = await makeMockedServer());
 
-    models = deps.Sequelize;
-
-    ({ apiKey } = await createOrg(
-      models,
-      deps.ModerationConfigService,
-      deps.ApiKeyService,
+    ({ apiKey, cleanup: orgCleanup } = await createOrg(
+      {
+        KyselyPg: deps.KyselyPg,
+        ModerationConfigService: deps.ModerationConfigService,
+        ApiKeyService: deps.ApiKeyService,
+      },
       orgId,
     ));
     const userType = await deps.ModerationConfigService.createUserType(orgId, {
@@ -107,24 +105,28 @@ describe('POST Report', () => {
 
     threadTypeId = threadType.id;
 
-    await models.User.create({
+    ({ cleanup: userCleanup } = await createUser(deps.KyselyPg, orgId, {
       id: userId,
-      orgId,
-      password: faker.random.alphaNumeric(),
-      firstName: faker.name.firstName(),
-      lastName: faker.name.lastName(),
-      email: faker.internet.email(),
-      loginMethods: ['password'],
-    });
+    }));
   });
 
   afterAll(async () => {
-    const { Org, User, ItemType } = models;
-    await Org.destroy({ where: { id: orgId } });
-    await ItemType.destroy({ where: { id: contentTypeId } });
-    await ItemType.destroy({ where: { id: userTypeId } });
-    await ItemType.destroy({ where: { id: threadTypeId } });
-    await User.destroy({ where: { id: userId } });
+    await orgCleanup();
+    await Promise.all([
+      deps.ModerationConfigService.deleteItemType({
+        orgId,
+        itemTypeId: contentTypeId,
+      }),
+      deps.ModerationConfigService.deleteItemType({
+        orgId,
+        itemTypeId: userTypeId,
+      }),
+      deps.ModerationConfigService.deleteItemType({
+        orgId,
+        itemTypeId: threadTypeId,
+      }),
+    ]);
+    await userCleanup();
     await shutdown();
   });
 

@@ -5,6 +5,7 @@ import { uid } from 'uid';
 import { type Dependencies } from '../../iocContainer/index.js';
 import { type ContentItemType } from '../../services/moderationConfigService/index.js';
 import createOrg from '../../test/fixtureHelpers/createOrg.js';
+import createUser from '../../test/fixtureHelpers/createUser.js';
 import { makeMockedServer } from '../../test/setupMockedServer.js';
 
 describe('POST Items', () => {
@@ -15,29 +16,27 @@ describe('POST Items', () => {
   let request: Awaited<ReturnType<typeof makeMockedServer>>['request'],
     shutdown: Awaited<ReturnType<typeof makeMockedServer>>['shutdown'],
     apiKey: Awaited<ReturnType<typeof createOrg>>['apiKey'],
-    models: Dependencies['Sequelize'],
+    orgCleanup: Awaited<ReturnType<typeof createOrg>>['cleanup'],
+    userCleanup: Awaited<ReturnType<typeof createUser>>['cleanup'],
     ModerationConfigService: Dependencies['ModerationConfigService'],
     ApiKeyService: Dependencies['ApiKeyService'],
-    analytics: Dependencies['DataWarehouseAnalytics'];
+    analytics: Dependencies['DataWarehouseAnalytics'],
+    KyselyPg: Dependencies['KyselyPg'];
 
   beforeAll(async () => {
     ({
       request,
       shutdown,
       deps: {
-        Sequelize: models,
         DataWarehouseAnalytics: analytics,
         ModerationConfigService,
         ApiKeyService,
+        KyselyPg,
       },
     } = await makeMockedServer());
 
-    const { User, Org } = models;
-
-    ({ apiKey } = await createOrg(
-      { Org },
-      ModerationConfigService,
-      ApiKeyService,
+    ({ apiKey, cleanup: orgCleanup } = await createOrg(
+      { KyselyPg, ModerationConfigService, ApiKeyService },
       orgId,
     ));
 
@@ -61,25 +60,18 @@ describe('POST Items', () => {
       schemaFieldRoles: {},
     });
 
-    await User.create({
+    ({ cleanup: userCleanup } = await createUser(KyselyPg, orgId, {
       id: userId,
-      orgId,
-      password: faker.random.alphaNumeric(),
-      firstName: faker.name.firstName(),
-      lastName: faker.name.lastName(),
-      email: faker.internet.email(),
-      loginMethods: ['password'],
-    });
+    }));
   });
 
   afterAll(async () => {
-    const { Org, User } = models;
-    await Org.destroy({ where: { id: orgId } });
+    await orgCleanup();
     await ModerationConfigService.deleteItemType({
       orgId,
       itemTypeId: contentType.id,
     });
-    await User.destroy({ where: { id: userId } });
+    await userCleanup();
     await shutdown();
   });
 

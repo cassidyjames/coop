@@ -1,17 +1,17 @@
-import { type Kysely, sql } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 
+import { getUtcDateOnlyString } from '../../../utils/time.js';
+import { type ModerationConfigServicePg } from '../dbTypes.js';
 import {
-  type RuleAlarmStatus,
   RuleStatus,
   RuleType,
   type ConditionSet,
+  type RuleAlarmStatus,
 } from '../index.js';
-import { type ModerationConfigServicePg } from '../dbTypes.js';
-import { getUtcDateOnlyString } from '../../../utils/time.js';
 import {
-  type PlainRuleWithLatestVersion,
   computeRuleStatusFromRow,
-} from '../../../models/rules/ruleTypes.js';
+  type PlainRuleWithLatestVersion,
+} from '../types/rules.js';
 
 const ruleSelect = [
   'r.id',
@@ -63,7 +63,10 @@ function enabledQuotaWhere(today: string) {
 }
 
 function rowToPlainRuleWithLatest(row: RuleRow): PlainRuleWithLatestVersion {
-  const status = computeRuleStatusFromRow(row.expirationTime, row.statusIfUnexpired);
+  const status = computeRuleStatusFromRow(
+    row.expirationTime,
+    row.statusIfUnexpired,
+  );
   const version = row.latestVersionString ?? '';
   return {
     id: row.id,
@@ -144,6 +147,27 @@ export default class RuleReadOperations {
       return null;
     }
     return rowToPlainRuleWithLatest(row);
+  }
+
+  /**
+   * All rules for an org (latest version string), for GraphQL org.rules and
+   * similar list surfaces. Not filtered by enabled status.
+   */
+  async getRulesForOrg(
+    orgId: string,
+    opts?: { readFromReplica?: boolean },
+  ): Promise<PlainRuleWithLatestVersion[]> {
+    const readFromReplica = opts?.readFromReplica ?? true;
+    const pg = readFromReplica ? this.pgQueryReplica : this.pgQuery;
+    const rows = (await pg
+      .selectFrom('public.rules as r')
+      .leftJoin('public.rules_latest_versions as rlv', 'rlv.rule_id', 'r.id')
+      .select(ruleSelect)
+      .where('r.org_id', '=', orgId)
+      .orderBy('r.name', 'asc')
+      .execute()) as RuleRow[];
+
+    return rows.map(rowToPlainRuleWithLatest);
   }
 
   async findEnabledUserRules() {
