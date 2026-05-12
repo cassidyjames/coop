@@ -66,6 +66,8 @@ The second step in your setup process will be defining these Actions in the Coop
 
 ### How to build an Action API Endpoint
 
+<!-- TODO: move this section to developer docs; it's out of scope for user docs -->
+
 For every Action you define in Coop, you have to expose the action through a public-facing API endpoint. Whenever an automated rule (or a moderator) determines that some Item should receive an Action, Coop will send a POST request to the Action's API endpoint. When your server receives that POST request, your code should actually perform the corresponding action.
 
 Here's an example of the body of a POST request that we'd send to your API when trying to perform an Action:
@@ -130,7 +132,9 @@ You can create and manage your Policies in the Policies Dashboard, and you can f
 
 ## Reports
 
-Reports are created when a user on your platform flags an Item as potentially harmful. The Report API is used for manual review, whether it’s in response to a user flag or just to trigger manual labeling. When a user flags an Item on your platform and you send it to the Report API, Coop adds it to a Review Queue so that your moderators can review it and decide what to do with it. Those items will automatically be added to Review Queues and users will be able to claim them in the manual review tool. Read more about reports [here](REPORTS.md)
+Reports are created when a user on your platform flags an Item as potentially harmful. The Report API is used for manual review, whether it’s in response to a user flag or just to trigger manual labeling. When a user flags an Item on your platform and you send it to the Report API, Coop adds it to a Review Queue so that your moderators can review it and decide what to do with it. Those items will automatically be added to Review Queues and users will be able to claim them in the manual review tool.
+
+Read more about [reports](reports.md).
 
 ## Appeals
 

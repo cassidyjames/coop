@@ -1,6 +1,27 @@
 # Administration
 
-Admins manage organization-wide configuration in Coop, including policies, user access, authentication, and integrations settings. All of these settings are accessible under **Settings** in the Coop UI.
+Admins manage organization-wide configuration in Coop, including items, actions, policies, user access, authentication, and integrations settings. All of these settings are accessible under **Settings** in the Coop UI.
+
+## Item Types
+
+![Configuration of an Item Type: a post from the firehose with a schema of fields that get sent to Coop including text, unique ID as well as what format the fields are in](../images/coop-items.png)
+
+Item Types represent the different types of entities on your platform. For example, if you've built a social network that allows users to create profiles, upload posts, and comment on other users' posts, then your Item Types might be **Profile**, **Post**, **Comment**, and **Comment Thread**. If you've built a marketplace platform, your Item Types might be **Buyer**, **Seller**, **Product Listing**, **Product Review,** **Direct Message**, **Transaction**, etc. Every Item you send Coop needs to be an instance of exactly one of these Item Types.
+
+When creating an Item Type, define the schema to include which fields will be included and shown to reviewers. These fields are also available in any rule logic to connect with signals for routing or automation.
+
+## Actions
+
+![Table of configured custom actions like: send warning, label as spam, delete content, delete account, ban email](../images/coop-actions.png)
+
+Actions represent any action you can perform on Items. Some common examples include Label, Send Warning, Delete, Ban, Mute, Send to Manual Review, Approve, etc.
+
+![Creating an action in Coop: add the name, description, what item types the action can run on, and a callback URL](../images/coop-define-action.png)
+
+For every Action you define in Coop, you have to expose the action through an API endpoint that can receive requests from Coop. Whenever your rules determine that some Item should receive an Action, Coop will send a POST request to the Action's API endpoint. When your server receives that POST request, your code should actually perform the corresponding action.
+
+![Two cards to set up API access to Google's Content Safety API and OpenAI's Moderation API](../images/coop-api-keys.png)
+Coop uses an API key to gate its endpoints. Use the UI to generate an API key to authenticate any requests Coop makes to your organization’s endpoints.
 
 ## Policies
 
@@ -106,6 +127,8 @@ To validate an incoming request:
 1. Hash the raw request body using SHA-256.
 2. Base64-decode the `Coop-Signature` header value to get the raw binary signature.
 3. Verify the signature against the hash using your public key.
+
+<!-- FIXME: probably too technical for user guide? -->
 
 **Example (JavaScript / Node.js)**
 

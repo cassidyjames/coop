@@ -1,5 +1,7 @@
 # Reports
 
+<!-- TODO: this seems far more developer-focused; move to developer guide, and write user-focused reports section here. -->
+
 These are the fields that Coop expects in the body of the request:
 
 | Property              | Type                    | Required? | Description                                                                                                                                                                                                                                                                                                            |

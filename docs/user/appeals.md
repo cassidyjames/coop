@@ -9,11 +9,13 @@ When a user on your platform is unsatisfied with your decision and submits an ap
 
 To populate Appeals in your Review Queues, send Coop appealed decisions and create a routing rule.
 
-![Coop routing rule configured to send all appeals to a dedicated appeals queue](./images/coop-appeal-routing.png)
+![Coop routing rule configured to send all appeals to a dedicated appeals queue](../images/coop-appeal-routing.png)
 
 When a user submits an appeal request, make a POST request to /api/v1/report/appeal. You'll have to [authenticate](ARCHITECTURE.md#authentication) the request and add the relevant parameters to the body of the request, as shown in our code examples below.
 
 ## REST API Examples
+
+<!-- FIXME: too technical for user docs! Move to developer docs. -->
 
 Below are some code snippets that you can paste directly into your code. You'll notice we're [authenticating the request](ARCHITECTURE.md#authentication) using your organization's API key in the HTTP headers.
 
@@ -123,7 +125,7 @@ Coop will respond with an HTTP response status code, which indicates whether the
 
 Successful requests will have a 204 status code.
 
-# Appeal Decision Callback API
+## Appeal Decision Callback API
 
 For every Appeal you moderate in Coop, you will receive the decision information through a public-facing API endpoint. Whenever a moderator accepts or rejects a user's appeal submission, Coop will send a POST request to your Appeal API endpoint. When your server receives that POST request, you may process that appeal decision internally and communicate the decision to the user.
 
