@@ -1,4 +1,4 @@
-# Getting Started
+# Welcome
 
 Welcome to the Coop documentation! These docs are split into a few guides, depending on who you are and what you're looking for:
 

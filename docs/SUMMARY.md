@@ -1,6 +1,6 @@
 # Summary
 
-- [Getting Started](README.md)
+- [Welcome](README.md)
 
 ---
 
