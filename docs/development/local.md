@@ -228,7 +228,7 @@ docker compose down        # stop containers, keep DB volumes
 docker compose down -v     # also drop DB volumes (fresh DBs next run)
 ```
 
-`check_migration_order` runs only in GitHub Actions — it's GitHub-specific and not needed locally. When adding a migration, use `date -u +"%Y.%m.%dT%H.%M.%S"` for the filename prefix and CI will pass.
+`check_migration_order` runs only in GitHub Actions; it's GitHub-specific and not needed locally. When adding a migration, use `date -u +"%Y.%m.%dT%H.%M.%S"` for the filename prefix and CI will pass.
 
 ## GraphQL development
 
@@ -252,8 +252,8 @@ Backend GraphQL definitions are annotated with `/* GraphQL */` at the start of e
 
 Two utility scripts in `server/bin/` help with common operations:
 
-- **`npm run create-org`** — creates a new organization with an admin user and API key.
-- **`npm run get-invite`** — retrieves the signup link for a user who has been invited via the UI.
+- **`npm run create-org`**: creates a new organization with an admin user and API key.
+- **`npm run get-invite`**: retrieves the signup link for a user who has been invited via the UI.
 
 See `server/bin/README.md` for detailed usage and examples.
 

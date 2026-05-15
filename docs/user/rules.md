@@ -30,11 +30,9 @@ Rules are evaluated in order, and a report is routed to the queue of the first m
 
 ![HMA routing rule](../images/hma-routing-rule.png)
 
-Routing Rules only affect where content lands for human review; they don't take enforcement actions. Pair them with [Proactive Rules](#proactive-rules) if you also want automated actions to fire.
-
 ## Matching Banks
 
-Matching banks are reusable sets of values you can reference across many rules without repeating yourself. Instead of listing 10,000 banned keywords in every rule that needs them, you define a bank once and reference it wherever needed.
+Matching banks are reusable sets of values you can reference across many rules without repeating yourself. Instead of listing all banned keywords in every rule that needs them, you define a bank once and reference it wherever needed.
 
 ![Banks](../images/coop-banks.png)
 
