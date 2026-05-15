@@ -14,12 +14,12 @@ For specific integration information, see that integration's documentation:
 
 ## Model cards
 
-Each integration includes a model card for consistent, comparable information about how it works. A model card is a short document describing a machine learning model's intended use, behavior, and limitations — think of it as a nutrition label for AI classifiers.
+Each integration includes a model card for consistent, comparable information about how it works. A model card is a short document describing a machine learning model's intended use, behavior, and limitations; think of it as a nutrition label for AI classifiers.
 
 Each integration's model card describes:
 
-| Field                    | Description                                                          |
-| ------------------------ | -------------------------------------------------------------------- |
+| Field              | Description                                                          |
+| ------------------ | -------------------------------------------------------------------- |
 | **Purpose**        | What the model is designed to detect or classify                     |
 | **Input**          | The type of content the model accepts (images, text, URLs, etc.)     |
 | **Output**         | The format and meaning of the model's response                       |
