@@ -10,8 +10,8 @@ import {
 } from '@/graphql/generated';
 import { filterNullOrUndefined } from '@/utils/collections';
 import { getFieldValueForRole } from '@/utils/itemUtils';
-import { ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { ExternalLink } from 'lucide-react';
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -62,7 +62,7 @@ export default function ReportInfoComponent(props: {
     payload.__typename === 'UserManualReviewJobPayload' ||
     payload.__typename === 'ContentManualReviewJobPayload' ||
     payload.__typename === 'ThreadManualReviewJobPayload'
-      ? payload.reportedForReasons ?? []
+      ? (payload.reportedForReasons ?? [])
       : [];
   // TODO: we really should add reportDate into this payload instead
   // of relying on the implicit ordering
@@ -110,14 +110,14 @@ export default function ReportInfoComponent(props: {
     reporterData.partialItems.items[0].__typename === 'UserItem'
       ? reporterData.partialItems.items[0]
       : reporterItemInvestigationData?.latestItemSubmissions[0]?.__typename ===
-        'UserItem'
-      ? reporterItemInvestigationData.latestItemSubmissions[0]
-      : undefined;
+          'UserItem'
+        ? reporterItemInvestigationData.latestItemSubmissions[0]
+        : undefined;
   const reporterDisplayName = reporterInfo
-    ? getFieldValueForRole<GQLSchemaFieldRoles, keyof GQLSchemaFieldRoles>(
+    ? (getFieldValueForRole<GQLSchemaFieldRoles, keyof GQLSchemaFieldRoles>(
         reporterInfo,
         'displayName',
-      ) ?? reporterInfo.id
+      ) ?? reporterInfo.id)
     : latestReporterIdentifier?.id;
 
   return (
@@ -151,12 +151,17 @@ export default function ReportInfoComponent(props: {
                 <th className="py-1 mr-4 font-bold align-top text-start whitespace-nowrap">
                   {isAppeal ? 'Actioned ' : 'Reported '}Item
                 </th>
-                <td className="flex py-1 align-top gap-2 text-start text-slate-500">
-                  {reportedItem.type.name}:{' '}
-                  <CopyTextComponent
-                    value={reportedItem.id}
-                    displayValue={reportedItem.id}
-                  />
+                <td className="py-1 align-top text-start text-slate-500">
+                  <div className="flex flex-wrap gap-x-2 gap-y-0 break-all">
+                    <span className="whitespace-nowrap">
+                      {reportedItem.type.name}:
+                    </span>
+                    <CopyTextComponent
+                      value={reportedItem.id}
+                      displayValue={reportedItem.id}
+                      wrapText
+                    />
+                  </div>
                 </td>
               </tr>
               {payload.enqueueSourceInfo && (

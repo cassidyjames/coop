@@ -159,10 +159,10 @@ function TableRowComponent(props: {
     }
     case 'USER_ID': {
       return (
-        <div className="align-top text-start">
+        <div className="align-top text-start min-w-0">
           {label ? <div className="pr-3 font-bold">{label}</div> : null}
           <Link
-            className="cursor-pointer shrink-0"
+            className="cursor-pointer break-all"
             to={`/dashboard/manual_review/investigation?id=${value.id}&typeId=${value.typeId}`}
             target="_blank"
           >
@@ -176,7 +176,7 @@ function TableRowComponent(props: {
       if (url == null) {
         return <NotProvidedComponent />;
       }
-      
+
       // Extract matched banks if available
       const matchedBanks = (value as any)?.matchedBanks;
       const hasMatches = Array.isArray(matchedBanks) && matchedBanks.length > 0;
@@ -194,8 +194,8 @@ function TableRowComponent(props: {
               blurStrength: unblurAllMedia
                 ? (0 as const)
                 : safetySettings?.moderatorSafetyBlurLevel
-                ? (safetySettings.moderatorSafetyBlurLevel as BlurStrength)
-                : (2 as const),
+                  ? (safetySettings.moderatorSafetyBlurLevel as BlurStrength)
+                  : (2 as const),
               grayscale: safetySettings?.moderatorSafetyGrayscale ?? false,
             }}
           />
@@ -232,8 +232,8 @@ function TableRowComponent(props: {
               blurStrength: unblurAllMedia
                 ? (0 as const)
                 : safetySettings?.moderatorSafetyBlurLevel
-                ? (safetySettings.moderatorSafetyBlurLevel as BlurStrength)
-                : (2 as const),
+                  ? (safetySettings.moderatorSafetyBlurLevel as BlurStrength)
+                  : (2 as const),
               maxWidth: maxWidthVideo,
               maxHeight: maxHeightVideo,
               muted: safetySettings?.moderatorSafetyMuteVideo ?? true,
