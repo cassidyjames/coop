@@ -1,20 +1,24 @@
 # Administration
 
-Admins manage organization-wide configuration in Coop, including items, actions, policies, user access, authentication, and integrations settings. All of these settings are accessible under **Settings** in the Coop UI.
+Admins manage organization-wide configuration including items, actions, policies, user access, authentication, and integrations settings. All of these settings are accessible under **Settings** in Coop.
 
 ## Item Types
 
+Item Types represent the different types of entities on your platform.
+
 ![Configuration of an Item Type: a post from the firehose with a schema of fields that get sent to Coop including text, unique ID as well as what format the fields are in](../images/coop-items.png)
 
-Item Types represent the different types of entities on your platform. For example, if you've built a social network that allows users to create profiles, upload posts, and comment on other users' posts, then your Item Types might be **Profile**, **Post**, **Comment**, and **Comment Thread**. If you've built a marketplace platform, your Item Types might be **Buyer**, **Seller**, **Product Listing**, **Product Review,** **Direct Message**, **Transaction**, etc. Every Item you send Coop needs to be an instance of exactly one of these Item Types.
+For example, a social network might have _Profile_, _Post_, _Comment_, and _Comment Thread_. A marketplace platform might include _Buyer_, _Seller_, _Product Listing_, _Product Review_, _Direct Message_, _Transaction_, etc. Every Item you send Coop needs to be an instance of exactly one of these Item Types.
 
 When creating an Item Type, define the schema to include which fields will be included and shown to reviewers. These fields are also available in any rule logic to connect with signals for routing or automation.
 
 ## Actions
 
+Actions represent any action you can perform on Items.
+
 ![Table of configured custom actions like: send warning, label as spam, delete content, delete account, ban email](../images/coop-actions.png)
 
-Actions represent any action you can perform on Items. Some common examples include Label, Send Warning, Delete, Ban, Mute, Send to Manual Review, Approve, etc.
+Some common examples include _Label_, _Send Warning_, _Delete_, _Ban_, _Mute_, _Approve_, etc.
 
 ![Creating an action in Coop: add the name, description, what item types the action can run on, and a callback URL](../images/coop-define-action.png)
 
@@ -25,21 +29,25 @@ Coop uses an API key to gate its endpoints. Use the UI to generate an API key to
 
 ## Policies
 
+Policies are categories of harm that are prohibited or monitored on your platform.
+
 ![Policy Dashboard showing 4 policies: Fraud, Nudity, Scams, Spam. There's a button to create new policies as well as options to add sub-policies for each existing policy and edit or delete them](../images/coop-policies.png)
 
-Policies are categories of harm that are prohibited or monitored on your platform. Some typical examples include Spam, Nudity, Fraud, Violence, etc. Policies can have sub-policies underneath them — for example, a Spam policy could have sub-policies like Commercial Spam, Repetitive Content, Fake Engagement, and Scams and Phishing.
+Some typical examples include _Spam_, _Nudity_, _Fraud_, _Violence_, etc. Policies can have sub-policies underneath them; for example, a _Spam_ policy could have sub-policies like _Commercial Spam_, _Repetitive Content_, _Fake Engagement_, and _Scams and Phishing_.
 
-It is often useful (and in some cases required by legislation such as the EU's Digital Services Act) to tie every action you take to one or more specific policies. For example, you could delete a comment under your Nudity policy, or under your Spam policy. Coop tracks those differences and measures how many actions you've taken per policy, so you can see how effectively you're enforcing each policy over time, identify gaps, and report to your team or to regulators.
+It is often useful (and in some cases required by legislation such as the EU's Digital Services Act) to tie every action you take to one or more specific policies. For example, you could delete a comment under your _Nudity_ policy, or under your _Spam_ policy. Coop tracks those differences and measures how many actions you've taken per policy, so you can see how effectively you're enforcing each policy over time, identify gaps, and report to your team or to regulators.
 
 Policies added in Coop's UI are visible to reviewers directly in the review flow.
 
 Learn more about policies from the [Trust & Safety Professional Association](https://www.tspa.org/curriculum/ts-fundamentals/policy/policy-development/).
 
-## User Management
+## User management
+
+Coop uses role-based access controls to ensure the right people can access the right data.
 
 ![User management page in Coop showing different users with different emails and roles assigned to them. There is an Approval Status column and a column showing when they were created](../images/coop-manage-users.png)
 
-Coop uses role-based access controls to ensure the right people can access the right data. You can invite users from **Settings → Users**, either copying the invite link to share directly or configuring an email service to send it automatically.
+You can invite users from **Settings → Users**, either copying the invite link to share directly or configuring an email service to send it automatically.
 
 ![Coop's user invitation flow](../images/coop-invite.png)
 
@@ -57,26 +65,19 @@ Coop comes with seven predefined roles:
 | Analyst                | No                        | No              | No                             | No                            | No                | Yes             |
 | External Moderator     | Yes                       | No              | No                             | No                            | No                | No              |
 
-**Admin**
-Admins manage their entire organization. They have full control over all resources and settings within Coop.
+**Admin**: manage the entire organization. They have full control over all resources and settings within Coop.
 
-**Rules Manager**
-Rules Managers can create, edit, and deploy Live Rules, run retroaction and backtests, view rule insights, manage policies, use the Investigation tool, and bulk-action content. They cannot manage users, queues, or other organization-level settings.
+**Rules Manager**: can create, edit, and deploy Live Rules, run retroaction and backtests, view rule insights, manage policies, use the Investigation tool, and bulk-action content. They cannot manage users, queues, or other organization-level settings.
 
-**Moderator Manager**
-Moderator Managers can view and edit all queues within the Manual Review Tool, manage moderator permissions, use the Investigation tool, and bulk-action content. They can also view child safety data.
+**Moderator Manager**: can view and edit all queues within the Manual Review Tool, manage moderator permissions, use the Investigation tool, and bulk-action content. They can also view child safety data.
 
-**Child Safety Moderator**
-Child Safety Moderators have the same permissions as Moderators, but can also review Child Safety jobs and see previous Child Safety decisions.
+**Child Safety Moderator**: the same permissions as Moderators, but can also review Child Safety jobs and see previous Child Safety decisions.
 
-**Moderator**
-Moderators can access the Manual Review Tool, but can only review jobs from queues they've been given permission to see. They cannot see any Child Safety-related jobs or decisions.
+**Moderator**: can access the Manual Review Tool, but can only review jobs from queues they've been given permission to see. They cannot see any Child Safety-related jobs or decisions.
 
-**Analyst**
-Analysts can modify and test Draft and Background Rules, run backtests, and view rule insights and the Investigation tool. They cannot create or edit Live Rules, run Retroaction, or access the Manual Review Tool.
+**Analyst**: can modify and test Draft and Background Rules, run backtests, and view rule insights and the Investigation tool. They cannot create or edit Live Rules, run Retroaction, or access the Manual Review Tool.
 
-**External Moderator**
-External Moderators can only review jobs in the Manual Review Tool. They cannot see any decisions or use any other tooling.
+**External Moderator**: can only review jobs in the Manual Review Tool. They cannot see any decisions or use any other tooling.
 
 ## SSO
 
@@ -111,7 +112,7 @@ Coop uses API keys to authenticate requests between your platform and Coop.
 
 ### Coop API key
 
-To authenticate requests your platform sends to Coop, include your organization's API key as an HTTP header on every request. You can find or rotate your key in **Settings → API Keys**.
+To authenticate requests your platform sends to Coop, include your organization's API key as an HTTP header on every request. You can find or rotate your key in **Settings** → **API Keys**.
 
 ```
 X-API-KEY: <<apiKey>>
@@ -120,7 +121,7 @@ Content-Type: application/json
 
 ### Webhook signature verification
 
-To verify that incoming requests to your Action endpoints were sent by Coop, use the webhook signature verification key shown in **Settings → API Keys**. Coop signs each outgoing request using **RSASSA-PKCS1-v1_5** with SHA-256 and includes the signature in a `Coop-Signature` header.
+To verify that incoming requests to your Action endpoints were sent by Coop, use the webhook signature verification key shown in **Settings** → **API Keys**. Coop signs each outgoing request using **RSASSA-PKCS1-v1_5** with SHA-256 and includes the signature in a `Coop-Signature` header.
 
 To validate an incoming request:
 
