@@ -1,60 +1,40 @@
 # OpenAI Moderation API
 
-Use the [moderations endpoint](https://platform.openai.com/docs/guides/moderation) to check whether text or images are potentially harmful. If harmful content is identified, you can take corrective action, like filtering content or intervening with user accounts creating offending content. The moderation endpoint is free to use.
+Coop integrates with [OpenAI's moderation endpoint](https://platform.openai.com/docs/guides/moderation) to classify text content for harmful categories. The moderation endpoint is free to use.
 
-There are two models you can use:
+## Requirements
 
-- **omni-moderation-latest:** This model and all snapshots support more categorization options and multi-modal inputs.
-- **text-moderation-latest (Legacy):** Older model that supports only text inputs and fewer input categorizations.
+- An [OpenAI](https://platform.openai.com) account with API access
 
-Here's a complete example showing how OpenAI is integrated into Coop.
+## Configuration
 
-## Signal Configuration
+In Coop, go to **Settings → Integrations** and add your OpenAI API key.
 
-**Signal Class** - Each third-party signal extends the `SignalBase` class and implements the `run` method to call the external API.  
-**Registration** - Signals are instantiated and registered in `server/services/signalsService/helpers/instantiateBuiltInSignals.ts`.
+## Signals
 
-#### Rules Implementation
+Each harmful category is available as a separate signal in Coop's signal library. All signals return a score between 0 and 1, which you can use as a condition threshold in routing rules and proactive rules.
 
-**Using the Signal in a Rule**:
+| Signal             | What it detects                                                                 |
+| ------------------ | ------------------------------------------------------------------------------- |
+| Hate               | Content that expresses hatred toward a group based on protected characteristics |
+| Hate (threatening) | Hate content that also includes threats or violent language                     |
+| Self-harm          | Content that depicts, encourages, or provides instructions for self-harm        |
+| Sexual             | Sexually explicit content                                                       |
+| Sexual (minors)    | Sexual content involving minors                                                 |
+| Violence           | Content that depicts or glorifies violence or physical harm                     |
+| Violence (graphic) | Graphic or gory violent content                                                 |
 
-```ts
-{
-  "name": "Block Hate Speech",
-  "conditions": {
-    "field": "post.text",
-    "signal": {
-      "type": "OPEN_AI_HATE_TEXT_MODEL"
-    },
-    "comparator": "GREATER_THAN",
-    "threshold": 0.8
-  },
-  "actions": [
-    { "type": "BLOCK" }
-  ]
-}
-```
+Coop also includes an OpenAI Whisper transcription signal, which can convert audio content to text for downstream analysis with text-based signals.
 
-**Execution Flow** (`server/condition_evaluator/leafCondition.ts`):
+## Models
 
-```ts
-// 1. Extract content field
-const value = getFieldValue(content, condition.field); // "post.text"
+OpenAI offers two models for the moderation endpoint:
 
-// 2. Get signal implementation
-const signal = signalsService.getSignal(condition.signal.type);
+- **omni-moderation-latest** (recommended): supports text and image inputs, more category coverage, and receives ongoing updates
+- **text-moderation-latest** (legacy): text inputs only, fewer categories
 
-// 3. Run signal
-const result = await signal.run({
-  value: { type: 'STRING', value },
-  orgId: org.id,
-});
+## Limitations
 
-// 4. Compare to threshold
-const conditionMet = result.score > condition.threshold; // 0.85 > 0.8 = true
-
-// 5. Execute action if condition met
-if (conditionMet) {
-  await executeAction({ type: 'BLOCK' });
-}
-```
+- Scores are probabilistic and not definitive; use thresholds appropriate to your platform and review confirmed positives
+- `omni-moderation-latest` supports image inputs but Coop's current integration passes text fields; images require separate configuration
+- Performance may vary across languages and locales; optimized for English content
