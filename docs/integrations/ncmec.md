@@ -29,7 +29,7 @@ Both sets of credentials must be obtained from NCMEC by [registering as an ESP](
 
 3. **NCMEC org settings configured**: set via **Settings → NCMEC** (Admin only). See [NCMEC Settings](#ncmec-settings) below.
 
-4. **A dedicated NCMEC manual review queue named "NCMEC Review**: Coop routes NCMEC jobs to the queue specified in your NCMEC settings. Queue IDs that are registered as production queues with Coop support will submit real CyberTips; all others use the NCMEC test environment.
+4. **A dedicated NCMEC manual review queue named "NCMEC Review"**: Coop routes NCMEC jobs to the queue specified in your NCMEC settings. Whether decisions made from this queue submit real CyberTips or go to NCMEC's sandbox is controlled by the `NCMEC_ENV` environment variable on the Coop server; see [Test vs. Production Submissions](#test-vs-production-submissions).
 
 5. **An Additional Info endpoint** (optional, but strongly recommended): a webhook Coop calls before submitting a CyberTip to fetch enriched metadata: email addresses, screen names, IP capture events, and per-media details. Without this, Coop submits the CyberTip with only the user ID and basic information from the Item data.
 
@@ -239,7 +239,21 @@ When a reviewer submits a CyberTip, Coop performs the following steps:
 
 ### Test vs. Production Submissions
 
-Coop determines whether to submit to the NCMEC test environment or production based on whether the NCMEC queue is registered as a production queue with Coop support. Test submissions go to `exttest.cybertip.org`; production submissions go to `report.cybertip.org`.
+Coop routes every CyberTip submission to one of two NCMEC endpoints:
+
+| Endpoint           | URL                    | What happens to reports                           |
+| ------------------ | ---------------------- | ------------------------------------------------- |
+| **Test (default)** | `exttest.cybertip.org` | Discarded by NCMEC. Used for integration testing. |
+| **Production**     | `report.cybertip.org`  | Real reports routed to law enforcement.           |
+
+The endpoint is selected by the `NCMEC_ENV` environment variable on the Coop server:
+
+- **Unset, or any value other than `production`** → test endpoint. This is the safe default.
+- **`NCMEC_ENV=production`** → production endpoint.
+
+Operators are responsible for ensuring `NCMEC_ENV` matches the credentials they have configured in **Settings → NCMEC**. NCMEC issues separate test and production credentials, and submitting from an unapproved integration to the production endpoint can result in your credentials being revoked.
+
+Reports submitted against the test endpoint are stored in Coop's database with an `is_test` flag and are only visible in the NCMEC Reports dashboard to the reviewer who submitted them. Production reports are visible to anyone in the org with the `VIEW_CHILD_SAFETY_DATA` permission.
 
 ## Webhooks
 
