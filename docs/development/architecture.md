@@ -508,7 +508,7 @@ Coop uses a multiple database storage system:
 
 ### PostgreSQL
 
-ACID compliant storage for config, auth, rules, and operational data including:
+ACID-compliant storage for config, auth, rules, and operational data including:
 
 - _public_: orgs, users, actions, policies, item_types, banks, api_keys
 - _jobs_: Scheduled job tracking
