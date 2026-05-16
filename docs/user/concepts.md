@@ -66,61 +66,7 @@ Each Action must map to an API endpoint that you expose to Coop. For example, if
 
 The second step in your setup process will be defining these Actions in the Coop dashboard.
 
-### How to build an Action API Endpoint
-
-<!-- TODO: move this section to developer docs; it's out of scope for user docs -->
-
-For every Action you define in Coop, you have to expose the action through a public-facing API endpoint. Whenever an automated rule (or a moderator) determines that some Item should receive an Action, Coop will send a POST request to the Action's API endpoint. When your server receives that POST request, your code should actually perform the corresponding action.
-
-Here's an example of the body of a POST request that we'd send to your API when trying to perform an Action:
-
-```json
-{
-  "item": {
-    "id": "abc123",
-    "typeId": "def456"
-  },
-  "action": {
-    "id": "mno654"
-  },
-  "policies": [
-    {
-      "id": "ghi789",
-      "name": "Hate Speech",
-      "penalty": "NONE"
-    },
-    {
-      "id": "jkl321",
-      "name": "Graphic Violence",
-      "penalty": "HIGH"
-    }
-  ],
-  "rules": [
-    {
-      "id": "061ba7f64db",
-      "name": "Composite Hate Speech"
-    },
-    {
-      "id": "5a0c37041ac",
-      "name": "Violence in Text Content"
-    }
-  ],
-  "custom": {
-    // ... any custom parameters that you configured in the Actions Dashboard
-  }
-}
-```
-
-The body of the request will contain the following fields:
-
-| Property   | Type            | Always Present?    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| :--------- | :-------------- | :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| item       | Item            | Always Present     | The Item that should receive this Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| action     | Action          | Always Present     | Coop provides some information about the Action being triggered in case it's helpful.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| policies   | Array\<Policy\> | Always Present     | Actions can be associated with Policies. For example, a piece of content can be deleted for violating a Spam Policy, or for violating a Nudity policy. Both Actions are "Delete" Actions, so Coop sends a POST request to the same "Delete" endpoint, but you may want to know why the content is being deleted, and which exact Policy was violated that led to this deletion, as it may affect how you handle it. _Note_: Each Action may be associated with more than one Policy (for example, if multiple Rules decided to delete a piece of content for different reasons). So, policies is an array of Policy objects. |
-| rules      | Array\<Rule\>   | Not Always Present | Actions can be triggered in a few different ways: by Rules, via Manual Review, through the Bulk Actioning tool, etc. If this Action was triggered by a Rule (or multiple Rules), Coop includes those Rules in this rules array. If the Action was triggered by some other means (for example, via manual review), the rules array will be empty.                                                                                                                                                                                                                                                                             |
-| custom     | Object          | Not Always Present | If you would like Coop to include any custom parameters in the request Coop sends to your Action endpoints, you can add those custom parameters to each Action in the Coop Action Form. These can be configured in the "Body" section of the form.                                                                                                                                                                                                                                                                                                                                                                           |
-| actorEmail | String          | Not Always Present | When using the Manual Review Tool to review something, the email address of the Coop user who decides to take action on a piece of content will be included in this field. If an action is taken by an automated rule or AI model, this field will be omitted.                                                                                                                                                                                                                                                                                                                                                               |
+For details on the webhook payload Coop sends to your Action API endpoints, see [Action webhooks](../development/architecture.md#actions) in the Development Guide.
 
 ## Policy
 
@@ -146,7 +92,7 @@ Read more about [reports](reports.md).
 
 When a user on your platform disagrees with a moderation decision you've made, they may want to "appeal" your decision - in other words, they want you to take another look and determine whether your initial moderation decision was correct. If you support this functionality (which is required for some platforms under the EU's Digital Services Act), then Coop can facilitate the entire appeal process.
 
-You can create an Appeal in Coop when a user on your platform requests that a moderation decision be re-reviewed by your team. When the user appeals a decision on your platform, you can send that appeal request to the Appeal API, and we'll add it to a Review Queue so that your moderators can review it and decide whether to uphold or overturn the original moderation decision. Read more about Appeals [here](APPEALS.md)
+You can create an Appeal in Coop when a user on your platform requests that a moderation decision be re-reviewed by your team. When the user appeals a decision on your platform, you can send that appeal request to the Appeal API, and we'll add it to a Review Queue so that your moderators can review it and decide whether to uphold or overturn the original moderation decision. Read more about [Appeals](appeals.md).
 
 ## Users
 

@@ -234,6 +234,54 @@ Appeals allow users to contest actions taken against items. Appeals include the 
 }
 ```
 
+**Appeal request body field reference:**
+
+| Property            | Type            | Required? | Description                                                                                              |
+| :------------------ | :-------------- | :-------- | :------------------------------------------------------------------------------------------------------- |
+| `appealId`          | String          | Required  | Your internal ID for this appeal submission. Propagated back to you when a moderator reviews the appeal. |
+| `appealedBy`        | ItemIdentifier  | Required  | The user submitting the appeal. Include your internal user ID and the Coop Item Type ID for the user.    |
+| `appealedAt`        | Datetime        | Required  | [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp of when the appeal was submitted.           |
+| `actionedItem`      | Item            | Required  | The item that was originally actioned.                                                                   |
+| `actionsTaken`      | Array\<String\> | Required  | Coop IDs of the actions that were taken and sent to your Action callback.                                |
+| `appealReason`      | String          | Optional  | Free-form text from the user explaining why they're appealing.                                           |
+| `violatingPolicies` | Array\<Policy\> | Optional  | Policies received from the Action API when the initial moderation action was taken.                      |
+| `additionalItems`   | Array\<Item\>   | Optional  | Additional content to display alongside the appeal for context.                                          |
+
+### Appeal Decision Callback
+
+For every appeal reviewed in Coop, you receive the moderator's decision through a callback to your Appeal API endpoint.
+
+**Route**: configured in your Appeals Dashboard  
+**Method**: `POST`
+
+**Example request body (JSON):**
+
+```json
+{
+  "appealId": "3cc76649-f99b-4ce2-b45f-4f40e7115e2a",
+  "item": {
+    "id": "ghi789",
+    "typeId": "jkl234"
+  },
+  "appealedBy": {
+    "id": "abc123",
+    "typeId": "def456"
+  },
+  "appealDecision": "ACCEPT",
+  "custom": {}
+}
+```
+
+**Callback field reference:**
+
+| Property         | Type           | Always present? | Description                                                                                 |
+| :--------------- | :------------- | :-------------- | :------------------------------------------------------------------------------------------ |
+| `item`           | Item           | Always          | The item that originally received the moderation action.                                    |
+| `appealId`       | String         | Always          | Your internal appeal ID, corresponding to the value sent via the Appeal API.                |
+| `appealedBy`     | ItemIdentifier | Always          | The user who submitted the appeal.                                                          |
+| `appealDecision` | ACCEPT/REJECT  | Always          | `ACCEPT` means the original action was incorrect; `REJECT` means it was correct and stands. |
+| `custom`         | Object         | Not always      | Custom parameters configured in the Appeal Configuration Form under "Body".                 |
+
 #### Report API schema
 
 | Property                | Type                    | Required? | Description                                                                                                               |
@@ -437,6 +485,17 @@ Action types:
 ```
 
 Failed webhook deliveries retry five times with exponential back off.
+
+**Webhook field reference:**
+
+| Property     | Type            | Always present? | Description                                                                                                     |
+| :----------- | :-------------- | :-------------- | :-------------------------------------------------------------------------------------------------------------- |
+| `item`       | Item            | Always          | The Item that should receive this Action.                                                                       |
+| `action`     | Action          | Always          | Information about the Action being triggered.                                                                   |
+| `policies`   | Array\<Policy\> | Always          | Policies associated with this action. May contain multiple entries if multiple rules triggered the same action. |
+| `rules`      | Array\<Rule\>   | Not always      | Rules that triggered this action. Empty if triggered via manual review or bulk actioning.                       |
+| `custom`     | Object          | Not always      | Custom parameters configured in the Action form under "Body".                                                   |
+| `actorEmail` | String          | Not always      | Email of the Coop user who took the action. Omitted for automated rule or AI-triggered actions.                 |
 
 ## Storage
 
