@@ -80,7 +80,7 @@ All API requests require an organization API key passed via the `x-api-key` head
 ### Content submission
 
 - **File**: `/server/routes/content/ContentRoutes.ts`
-- **Route**: `Post /api/v1/content/`
+- **Route**: `POST /api/v1/content/`
 - **Header**: `x-api-key: <org-api-key>`
 
 Accepts any item (eg: content, user, thread) but only accepts a single item at a time. By default, requests are processed asynchronously. To force synchronous mode, set `sync: true`
