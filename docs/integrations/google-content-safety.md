@@ -37,7 +37,7 @@ The higher the priority, the more likely the image may be abusive content. Howev
 
 - It is recommended for the image resolution to be around 640x480 pixels (about 300k pixels) for best performance.
 
-- If you have an image smaller than 300K pixels, do NOT resize it to a larger image as it introduce noises and does not improve performance.
+- If you have an image smaller than 300K pixels, do NOT resize it to a larger image as it introduces noise and does not improve performance.
 
 - For images larger than 300K pixels you may consider resizing them to 300K. The performance is not expected to degrade in this case.
 

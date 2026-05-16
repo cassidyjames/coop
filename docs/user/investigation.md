@@ -11,7 +11,7 @@ Enter the unique ID of an item or user to see:
 - The full history of actions taken on the item and its creator, including who made each decision
 - Related items: for example, surrounding comments in the same thread for context
 
-You can also navigate to Investigation directly from a task in the Review Console by clicking through from the item or user in the task view.
+You can also navigate to Investigation directly from a job in the Review Console by clicking through from the item or user in the job view.
 
 ## Taking action
 

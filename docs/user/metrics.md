@@ -24,7 +24,7 @@ The Overview dashboard gives a high-level picture of moderation activity. All me
 
 ## Recent Decisions
 
-![Coop's recent decisions page showing a log of all actions taken in Coop and who took the action. There are buttons to refresh the table, download all decisions, and download only the tasks skipped by users](../images/coop-recent-decisions.png)
+![Coop's recent decisions page showing a log of all actions taken in Coop and who took the action. There are buttons to refresh the table, download all decisions, and download only the jobs skipped by users](../images/coop-recent-decisions.png)
 
 Visit **Review Console** → **Recent Decisions** to review every action taken in Coop: who made the decision, on what content, and when. You can click through to the full job from any entry to investigate further or take an additional action.
 

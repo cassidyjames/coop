@@ -37,14 +37,14 @@ At minimum, the item's configured fields are rendered. Depending on the item typ
 
 ### Decisions
 
-Each task shows the decisions available to the reviewer. By default, every queue includes:
+Each job shows the decisions available to the reviewer. By default, every queue includes:
 
-- **Ignore**: close the task with no action taken
-- **Enqueue to NCMEC**: move the task to the NCMEC review queue, converting it to a user-level review that aggregates all media associated with the user
-- **Move**: transfer the task to a different queue
+- **Ignore**: close the job with no action taken
+- **Enqueue to NCMEC**: move the job to the NCMEC review queue, converting it to a user-level review that aggregates all media associated with the user
+- **Move**: transfer the job to a different queue
 - **[Custom actions](administration.md#actions)** you have configured for the relevant item type, besides those hidden for the current queue
 
-Policies are visible to reviewers directly in the task view so they can reference enforcement guidelines without leaving the review flow.
+Policies are visible to reviewers directly in the job view so they can reference enforcement guidelines without leaving the review flow.
 
 ## Wellness
 

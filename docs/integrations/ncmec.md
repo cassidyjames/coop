@@ -29,7 +29,7 @@ Both sets of credentials must be obtained from NCMEC by [registering as an ESP](
 
 3. **NCMEC org settings configured**: set via **Settings → NCMEC** (Admin only). See [NCMEC Settings](#ncmec-settings) below.
 
-4. **A dedicated NCMEC manual review queue named "NCMEC Review"**: Coop routes NCMEC jobs to the queue specified in your NCMEC settings. Whether decisions made from this queue submit real CyberTips or go to NCMEC's sandbox is controlled by the `NCMEC_ENV` environment variable on the Coop server; see [Test vs. Production Submissions](#test-vs-production-submissions).
+4. **A dedicated NCMEC manual review queue** (for example, named `NCMEC Review`): Coop routes NCMEC jobs to the queue specified in your NCMEC settings. Whether decisions made from this queue submit real CyberTips or go to NCMEC's sandbox is controlled by the `NCMEC_ENV` environment variable on the Coop server; see [Test vs. Production Submissions](#test-vs-production-submissions).
 
 5. **An Additional Info endpoint** (optional, but strongly recommended): a webhook Coop calls before submitting a CyberTip to fetch enriched metadata: email addresses, screen names, IP capture events, and per-media details. Without this, Coop submits the CyberTip with only the user ID and basic information from the Item data.
 
@@ -142,9 +142,9 @@ This user-centric aggregation means that even if a user has uploaded many pieces
 
 ## Reviewing an NCMEC Job
 
-The NCMEC job UI is distinct from standard review tasks. It is designed around the user and all of their associated media.
+The NCMEC job UI is distinct from standard review jobs. It is designed around the user and all of their associated media.
 
-![Coop's NCMEC Reporting task view showing aggregated media for a user, keyboard shortcuts for industry classifications, incident type dropdown, and per-media label selectors](../images/coop-ncmec-job.png)
+![Coop's NCMEC Reporting job view showing aggregated media for a user, keyboard shortcuts for industry classifications, incident type dropdown, and per-media label selectors](../images/coop-ncmec-job.png)
 
 ### Incident Type
 

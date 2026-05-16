@@ -104,7 +104,7 @@ npm run db:drop     # Drop database
 
 ### Migration locations
 
-```
+```text
 db/src/scripts/
 ├── api-server-pg/    # PostgreSQL
 ├── clickhouse/       # ClickHouse
@@ -143,7 +143,7 @@ Start the client in your second terminal:
 cd client && npm run start
 ```
 
-Optionally, to keep GraphQL schema changes up to date, run in a tihrd terminal:
+Optionally, to keep GraphQL schema changes up to date, run in a third terminal:
 
 ```sh
 npm run generate:watch

@@ -54,7 +54,7 @@ item: {
 }
 ```
 
-The id field will be your unique identifier for the Item, and the typeId field will be Coop’s ID for the corresponding Item Type. Once you create an Item Type in your Coop dashboard, you'll see its generated ID, which you can then use to populate the typdId field when you send API requests to Coop.
+The id field will be your unique identifier for the Item, and the typeId field will be Coop’s ID for the corresponding Item Type. Once you create an Item Type in your Coop dashboard, you'll see its generated ID, which you can then use to populate the typeId field when you send API requests to Coop.
 
 ## Actions
 

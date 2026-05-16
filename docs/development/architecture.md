@@ -36,7 +36,7 @@ Coop is built as a monorepo with a React frontend, Node.js backend, and multi-da
 
 ### Directory structure
 
-```
+```text
 coop/
 ├── client/                    # React frontend
 │   └── src/
@@ -354,7 +354,7 @@ All API errors use a consistent JSON structure:
 
 ## Rules
 
-Coop supports two sets of [rules](RULES.md). Each has separate code paths, storage tables, and UI surfaces.
+Coop supports two sets of [rules](../user/rules.md). Each has separate code paths, storage tables, and UI surfaces.
 
 ### Proactive Rules
 
