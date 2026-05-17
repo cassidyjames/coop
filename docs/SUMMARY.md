@@ -18,6 +18,18 @@
 
 ---
 
+- [API Reference](api/README.md)
+  - [Submit Items](api/items.md)
+  - [Report API](api/report.md)
+  - [Appeal API](api/appeal.md)
+  - [Handle Moderation Actions](api/actions.md)
+  - [Policies](api/policies.md)
+  - [User Scores](api/user-scores.md)
+  - [GDPR Deletion](api/gdpr.md)
+  - [Errors](api/errors.md)
+
+---
+
 - [Development Guide](development/README.md)
   - [Local Development](development/local.md)
   - [Architecture](development/architecture.md)
