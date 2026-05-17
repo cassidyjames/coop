@@ -70,62 +70,24 @@ Coop's backend uses [BottleJS](https://github.com/young-steveo/bottlejs) for dep
 
 ## API
 
-Coop accepts both synchronous and asynchronous input.
-
-- Synchronous input is handled via REST APIs and supports item submission, action execution, reporting workflows, policy retrieval, and related operations.
-- Asynchronous input is handled via BullMQ job queues backed by Redis.
-
-All API requests require an organization API key passed via the `x-api-key` header.
+Coop accepts both synchronous and asynchronous input via REST APIs. All API requests require an organization API key passed via the `x-api-key` header.
 
 For the adopter-facing API reference, including full request/response schemas and field tables, see [API Reference](../api/README.md).
 
-### Content submission
+### Item submission
 
-- **File**: `/server/routes/content/ContentRoutes.ts`
-- **Route**: `POST /api/v1/content/`
-- **Header**: `x-api-key: <org-api-key>`
+The primary way to send data to Coop is via the [Submit Items API](../api/items.md).
 
-Accepts any item (eg: content, user, thread) but only accepts a single item at a time. By default, requests are processed asynchronously. To force synchronous mode, set `sync: true`
-
-**Example request body (JSON):**
-
-```json
-{
-  "contentId": "unique-id-123",
-  "contentType": "Comment",
-  "content": {
-    "text": "Hello world",
-    "authorId": "user-456",
-    "createdAt": "2024-01-01T00:00:00Z"
-  },
-  "userId": "user-456",
-  "sync": false
-}
-```
+- **Route**: `POST /api/v1/items/async/`
+- **Asynchronous**: Submissions are queued for processing. Automated rules run in the background.
+- **Batched**: You can submit multiple items (content, users, threads) in a single request.
 
 ### Action execution
 
-- **File**: `/server/routes/action/ActionRoutes.ts`
+When an action is triggered, Coop can send a webhook to your platform. See [Handle Moderation Actions](../api/actions.md) for details on the webhook format and how to process it.
+
 - **Route**: `POST /api/v1/actions`
-- **Header**: `x-api-key: <org-api-key>`
-
-**Example request body (JSON):**
-
-```json
-{
-  "actionId": "action-id-to-execute",
-  "itemId": "target-item-id",
-  "itemTypeId": "item-type-id",
-  "policyIds": ["policy-id-1", "policy-id-2"],
-  "reportedItems": [
-    {
-      "id": "reported-item-id",
-      "typeId": "reported-item-type-id"
-    }
-  ],
-  "actorId": "user-id-who-triggered-action"
-}
-```
+- **Authentication**: Verified via `Coop-Signature` header.
 
 ## Rules
 

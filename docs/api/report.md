@@ -50,15 +50,16 @@ Authentication: `X-API-KEY` header. See [API Keys and Authentication](../develop
 
 ### Request body fields
 
-| Field                   | Type                    | Required? | Description                                                                                                              |
-| :---------------------- | :---------------------- | :-------- | :----------------------------------------------------------------------------------------------------------------------- |
-| `reporter`              | Reporter                | Required  | The user that submitted the report                                                                                       |
-| `reportedAt`            | Datetime                | Required  | [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp of when the item was reported                               |
-| `reportedItem`          | ReportedItem            | Required  | The item that was reported                                                                                               |
-| `reportedForReason`     | ReportedForReason       | Optional  | Why the item was reported                                                                                                |
-| `reportedItemThread`    | Array\<ReportedItem\>   | Optional  | Other items in the same thread (e.g. surrounding messages in a DM thread). Coop uses this to show reviewers full context |
-| `reportedItemsInThread` | Array\<ItemIdentifier\> | Optional  | Items within `reportedItemThread` that were specifically reported (tagged in the review UI)                              |
-| `additionalItems`       | Array\<ReportedItem\>   | Optional  | Other content to display alongside the report for context (e.g. the author's recent posts)                               |
+| Field                      | Type                    | Required? | Description                                                                                                              |
+| :------------------------- | :---------------------- | :-------- | :----------------------------------------------------------------------------------------------------------------------- |
+| `reporter`                 | Reporter                | Required  | The user that submitted the report                                                                                       |
+| `reportedAt`               | Datetime                | Required  | [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp of when the item was reported                               |
+| `reportedItem`             | ReportedItem            | Required  | The item that was reported                                                                                               |
+| `reportedItem.data.images` | Array                   | Optional  | Array of URL strings. Triggers automated [HMA image hashing](../integrations/hma.md).                                    |
+| `reportedForReason`        | ReportedForReason       | Optional  | Why the item was reported                                                                                                |
+| `reportedItemThread`       | Array\<ReportedItem\>   | Optional  | Other items in the same thread (e.g. surrounding messages in a DM thread). Coop uses this to show reviewers full context |
+| `reportedItemsInThread`    | Array\<ItemIdentifier\> | Optional  | Items within `reportedItemThread` that were specifically reported (tagged in the review UI)                              |
+| `additionalItems`          | Array\<ReportedItem\>   | Optional  | Other content to display alongside the report for context (e.g. the author's recent posts)                               |
 
 **Reporter schema:**
 
