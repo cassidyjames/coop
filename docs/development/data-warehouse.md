@@ -2,7 +2,7 @@
 
 ## Overview
 
-The data warehouse abstraction allows you to use **any data warehouse** (Clickhouse, PostgreSQL, BigQuery, Redshift, Databricks, etc.) without changing application code. Define your warehouse settings by changing one environment variable.
+The data warehouse abstraction decouples analytics writes from a specific backend. Coop ships with **ClickHouse** and **PostgreSQL** adapters; the `IDataWarehouse` interface can be implemented to support additional backends. Define your warehouse settings by changing one environment variable.
 
 ## Quick start
 

@@ -69,5 +69,5 @@ See [Errors](errors.md) for the full error response format.
 ## Notes
 
 - Processing is asynchronous by default. If you need synchronous processing (results in the response), contact support.
-- If a rule matches and triggers an action, Coop sends a POST request to your [action callback endpoint](handle-actions.md).
+- If a rule matches and triggers an action, Coop sends a POST request to your [action callback endpoint](actions.md).
 - For background on Item Types and how items are identified in Coop, see [Basic Concepts](../user/concepts.md).

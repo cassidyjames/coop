@@ -28,7 +28,7 @@ Coop also includes an OpenAI Whisper transcription signal, which can convert aud
 
 ## Models
 
-Coop uses `omni-moderation-latest`, which supports both text and image inputs and receives ongoing updates from OpenAI.
+Coop calls the `/v1/moderations` endpoint without pinning a model version, so OpenAI applies its current default (`omni-moderation-latest`). If OpenAI changes their default, Coop's behavior will follow automatically.
 
 ## Limitations
 
