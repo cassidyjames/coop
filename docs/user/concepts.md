@@ -120,7 +120,6 @@ The User Score is calculated based on the ratio of penalties to submissions:
   - Medium: 3 points
   - High: 9 points
   - Severe: 27 points
-- Penalties accumulate with "strikes" (repeat offenses can have escalating penalties)
 
 #### Example
 

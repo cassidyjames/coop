@@ -5,20 +5,19 @@ config:
   look: classic
 ---
 flowchart LR
-    P((Platform)) -->|Events| C
+    P((Platform)) -->|Items & Reports| R
 
     subgraph C[Coop]
-        R{Rules Engine}
         M[Matching Banks] --> R
         S[Signals] --> R
 
-        R --> |Routing Rules| HR{Human Review<br>Queues}
-
+        R{Rules Engine} --> |Routing Rules| HR{Review Console}
         R --> |Proactive Rules| A[Action]
+
         HR --> X((Ignore))
         HR --> A
     end
-    A --> |Reported Back| P
+    A --> |Webhook| P
 
     style P fill:#BBDEFB,stroke:#2962FF
     style C fill:#FFF9C4,stroke:#FFD600
