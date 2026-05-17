@@ -43,9 +43,9 @@ You may add as many Fields as you'd like, and then you can utilize them in your 
 
 #### Important note on how Coop uniquely identifies an Item
 
-In Coop, to uniquely identify a particular Item, use an (Item ID, Item Type ID) pair. Some platforms may not be able to guarantee that a comment ID and a user ID won't clash. Some other customers may have multiple platforms they own and operate, with no guarantee that Item IDs across platforms won't clash with each other.
+In Coop, to uniquely identify a particular Item, use an (Item ID, Item Type ID) pair. Some platforms may not be able to guarantee that a comment ID and a user ID won't clash. Some other platform operators may have multiple platforms they own and operate, with no guarantee that Item IDs across platforms won't clash with each other.
 
-In those circumstances, the (Item ID, Item Type ID) pair is needed to uniquely identify the correct Item. It’s recommended to send your Items in the following shape:
+In those circumstances, the (Item ID, Item Type ID) pair is needed to uniquely identify the correct Item. In API requests, these are represented as sibling fields: `id` and `typeId`. It’s recommended to send your Items in the following shape:
 
 ```ts
 item: {
