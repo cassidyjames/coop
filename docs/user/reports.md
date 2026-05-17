@@ -17,7 +17,7 @@ If `reportedForReason.csam` is `true`, the job is routed directly to the NCMEC q
 
 ## Sending reports to Coop
 
-Reports are submitted via `POST /api/v1/report`. For the full API schema (field definitions, types, and requirements), see the [Report API schema](../development/architecture.md#report-api-schema) in the Development Guide.
+Reports are submitted via `POST /api/v1/report`. For the full API schema (field definitions, types, and requirements), see the [Report API](../api/report.md) reference.
 
 ## Appeals
 

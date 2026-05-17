@@ -66,7 +66,7 @@ Each Action must map to an API endpoint that you expose to Coop. For example, if
 
 The second step in your setup process will be defining these Actions in the Coop dashboard.
 
-For details on the webhook payload Coop sends to your Action API endpoints, see [Action webhooks](../development/architecture.md#actions) in the Development Guide.
+For details on the webhook payload Coop sends to your Action API endpoints, see [Handle Moderation Actions](../api/actions.md).
 
 ## Policy
 
@@ -114,11 +114,12 @@ The User Score is calculated based on the ratio of penalties to submissions:
 
 #### How Penalties Work
 
-- Each action has a penalty weight (configured per action+policy):
-  - Small: 1 point
+- Each action and policy has a penalty weight; Coop adds both to compute the combined penalty for that (action, policy) pair:
+  - None: 0 points
+  - Low: 1 point
   - Medium: 3 points
-  - Large: 9 points
-  - Extreme: 27 points
+  - High: 9 points
+  - Severe: 27 points
 - Penalties accumulate with "strikes" (repeat offenses can have escalating penalties)
 
 #### Example

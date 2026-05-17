@@ -46,6 +46,10 @@ Each job shows the decisions available to the reviewer. By default, every queue 
 
 Policies are visible to reviewers directly in the job view so they can reference enforcement guidelines without leaving the review flow.
 
+### Comments
+
+Moderators can add internal comments to any job to communicate with teammates—flagging a concern, requesting a second opinion, or documenting context for future reference. Comments are visible only to members of your organization and are never shown to the reported user or the reporter.
+
 ## Wellness
 
 Reviewer wellness and safety is a core concern in trust & safety work. Coop includes configurable settings to reduce the impact of reviewing harmful content. Coop supports:

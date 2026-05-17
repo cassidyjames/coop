@@ -27,6 +27,14 @@ For every Action you define in Coop, you have to expose the action through an AP
 ![Two cards to set up API access to Google's Content Safety API and OpenAI's Moderation API](../images/coop-api-keys.png)
 Coop uses an API key to gate its endpoints. Use the UI to generate an API key to authenticate any requests Coop makes to your organization’s endpoints.
 
+## User Scores
+
+Coop tracks a score for each user based on their moderation history. Scores help moderators prioritize review—a low-scoring user's content can be routed to a stricter queue or automatically actioned.
+
+Each Action has a **penalty weight** (None, Low, Medium, High, or Severe), and each Policy also has a penalty weight. When a decision is made, Coop adds both weights to compute the combined penalty for that (Action, Policy) pair. Higher combined penalties push the user's score down faster.
+
+For the scoring formula, thresholds, and an example, see [User Score](concepts.md#user-score) in Basic Concepts.
+
 ## Policies
 
 Policies are categories of harm that are prohibited or monitored on your platform.

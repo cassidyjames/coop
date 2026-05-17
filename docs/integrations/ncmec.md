@@ -97,9 +97,9 @@ HMA syncs hashes from NCMEC via NCMEC's [Hash Sharing API](https://report.cybert
 4. In Coop's **Matching Banks**, the NCMEC-sourced bank will be available to reference in rules.
 5. How you set things up depends on your use case:
 
-- If items are submitted by user reports (`POST /api/v1/report`): create a routing rule with the NCMEC hash match logic and assign it to the NCMEC queue.
+- If items are submitted by [user reports](../api/report.md): create a routing rule with the NCMEC hash match logic and assign it to the NCMEC queue.
 
-- If items are submitted via the items API `(POST /api/v1/items/async/)` and you want Coop to proactively flag matches without a user report: you need an automated enforcement rule with the image hash condition and a "Enqueue to NCMEC" action.
+- If items are submitted via the [items API](../api/items.md) and you want Coop to proactively flag matches without a user report: you need an automated enforcement rule with the image hash condition and a "Enqueue to NCMEC" action.
 
 ### 2. Novel CSAM Detection (Content Safety API)
 

@@ -56,10 +56,10 @@ For details on routing NCMEC hash matches into a CSAM review workflow, see [NCME
 
 Once HMA is connected and hash banks are configured, the image hash signal is available in both routing rules and proactive rules.
 
-**If items are submitted by user reports** (`POST /api/v1/report`): no enforcement rule is needed. Reported items are automatically enqueued for review, and a routing rule with the image hash condition will direct matches to the right queue.
+**If items are submitted by [user reports](../api/report.md)**: no enforcement rule is needed. Reported items are automatically enqueued for review, and a routing rule with the image hash condition will direct matches to the right queue.
 
 ![A routing rule using HMA hash matching](../images/hma-routing-rule.png)
 
-**If items are submitted via the items API** (`POST /api/v1/items/async/`) and you want Coop to proactively flag matches without a user report: create a proactive rule with the image hash condition and an action, typically "Send to Manual Review" or "Enqueue to NCMEC." Optionally pair it with a routing rule to send matches to a specific queue; otherwise they go to the default queue.
+**If items are submitted via the [items API](../api/items.md)** and you want Coop to proactively flag matches without a user report: create a proactive rule with the image hash condition and an action, typically "Send to Manual Review" or "Enqueue to NCMEC." Optionally pair it with a routing rule to send matches to a specific queue; otherwise they go to the default queue.
 
 See [Automated Routing & Enforcement](../user/rules.md) for more on building rules.

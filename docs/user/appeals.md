@@ -23,6 +23,4 @@ Once a decision is made, Coop sends the outcome back to your platform via the Ap
 
 Before implementing the Appeal API, complete your [Basic Concepts](concepts.md) setup: you'll need [Item Types](concepts.md#item-type), [Actions](concepts.md#actions), and [Policies](concepts.md#policy) configured in Coop first.
 
-When a user submits an appeal on your platform, make a `POST` request to `/api/v1/report/appeal`. You'll need to [authenticate](../development/api-auth.md) the request using your organization's API key.
-
-See [Appeals](../development/architecture.md#appeal) in the Development Guide for the full request schema and Appeal Decision Callback documentation.
+See the [Appeal API](../api/appeal.md) reference for the full request schema and authentication requirements, and [Handle Moderation Actions](../api/actions.md#appeal-decision-callback) for the Appeal Decision Callback.
