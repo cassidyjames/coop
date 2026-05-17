@@ -40,7 +40,7 @@ You can submit multiple items in a single request by including additional object
 | `items[].typeId`            | String | Required  | The Coop Item Type ID for this item, as configured in the dashboard      |
 | `items[].data`              | Object | Required  | The item payload. Fields must match the schema defined for the Item Type |
 | `items[].typeVersion`       | String | Optional  | Version string for schema versioning                                     |
-| `items[].typeSchemaVariant` | String | Optional  | Schema variant identifier                                                |
+| `items[].typeSchemaVariant` | String | Optional  | Schema variant. Valid values: `"original"` or `"partial"`                |
 
 ### Formatting `data` fields
 

@@ -40,6 +40,12 @@ You can include multiple users in a single request.
 | :---------- | :------------------------------------------------------ |
 | `requestId` | A unique ID for this deletion request, for your records |
 
+| Status            | Meaning                                        |
+| :---------------- | :--------------------------------------------- |
+| `201 Created`     | Deletion request accepted; returns `requestId` |
+| `400 Bad Request` | Validation failure — see [Errors](errors.md)   |
+| `401 / 403`       | Authentication failure                         |
+
 Deletion is processed asynchronously. The `requestId` can be used to correlate this request with any downstream processing or audit logs.
 
 ## Notes

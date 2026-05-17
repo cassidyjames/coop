@@ -95,8 +95,16 @@ Authentication: `X-API-KEY` header. See [API Keys and Authentication](../develop
 
 ## Response
 
+```json
+{ "reportId": "report-uuid" }
+```
+
+| Field      | Type   | Description                                   |
+| :--------- | :----- | :-------------------------------------------- |
+| `reportId` | String | A unique ID for this report, assigned by Coop |
+
 | Status            | Meaning                                      |
 | :---------------- | :------------------------------------------- |
-| `204 No Content`  | Report received successfully                 |
+| `201 Created`     | Report received; returns a `reportId`        |
 | `400 Bad Request` | Validation failure — see [Errors](errors.md) |
 | `401 / 403`       | Authentication failure                       |

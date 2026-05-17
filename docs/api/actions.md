@@ -33,13 +33,15 @@ Failed deliveries are retried up to five times with exponential backoff.
 | `rules`      | Array\<Rule\>   | Not always      | Rules that triggered this action. Empty if triggered via manual review or bulk actioning                      |
 | `custom`     | Object          | Not always      | Custom parameters configured in the Action form under "Body"                                                  |
 | `actorEmail` | String          | Not always      | Email of the Coop user who took the action. Omitted for automated rule-triggered actions                      |
+| `actorNote`  | String          | Not always      | Note added by the moderator when taking the action. Omitted if no note was provided                           |
 
 **Item schema:**
 
-| Field    | Type   | Description                         |
-| :------- | :----- | :---------------------------------- |
-| `id`     | String | Your unique identifier for the item |
-| `typeId` | String | The Item Type ID                    |
+| Field      | Type   | Description                         |
+| :--------- | :----- | :---------------------------------- |
+| `id`       | String | Your unique identifier for the item |
+| `typeId`   | String | The Item Type ID                    |
+| `typeName` | String | The display name of the Item Type   |
 
 **Policy schema:**
 
