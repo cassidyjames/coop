@@ -2,9 +2,10 @@
 
 Welcome to the Coop documentation! These docs are split into a few guides, depending on who you are and what you're looking for:
 
-- [User Guide](user): learn about Coop, its functionality, and the user interface
-- [Development Guide](development): get Coop running and learn how to navigate the code
-- [Integrations Guide](integrations): specific details on included integrations
+- [User Guide](user/): learn about Coop, its functionality, and the user interface
+- [Development Guide](development/): get Coop running and learn how to navigate the code
+- [API Reference](api/): technical reference for Coop's API
+- [Integrations](integrations/): specific details on included integrations
 
 Note that the docs are versioned; other versions can be found at the [documentation site index](https://roostorg.github.io/coop/).
 

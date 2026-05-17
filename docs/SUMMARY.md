@@ -18,6 +18,15 @@
 
 ---
 
+- [Development Guide](development/README.md)
+  - [Local Development](development/local.md)
+  - [Architecture](development/architecture.md)
+  - [API Authentication](development/api-auth.md)
+  - [Data Warehouse Abstraction](development/data-warehouse.md)
+  - [Deployment](development/deployment.md)
+
+---
+
 - [API Reference](api/README.md)
   - [Submit Items](api/items.md)
   - [Report API](api/report.md)
@@ -27,15 +36,6 @@
   - [User Scores](api/user-scores.md)
   - [GDPR Deletion](api/gdpr.md)
   - [Errors](api/errors.md)
-
----
-
-- [Development Guide](development/README.md)
-  - [Local Development](development/local.md)
-  - [Architecture](development/architecture.md)
-  - [API Authentication](development/api-auth.md)
-  - [Data Warehouse Abstraction](development/data-warehouse.md)
-  - [Deployment](development/deployment.md)
 
 ---
 

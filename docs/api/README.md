@@ -13,12 +13,12 @@ You can find or rotate your API key under **Settings → API Keys** in the Coop 
 
 ## Endpoints
 
-| Endpoint                     | Description                                                                 |
-| :--------------------------- | :-------------------------------------------------------------------------- |
-| `POST /api/v1/items/async/`  | [Submit Items](items.md) — send content for rule evaluation                 |
-| `POST /api/v1/report`        | [Report API](report.md) — submit a user report                              |
-| `POST /api/v1/report/appeal` | [Appeal API](appeal.md) — submit a user appeal                              |
-| `GET /api/v1/policies/`      | [Policies](policies.md) — fetch your configured policies                    |
-| `GET /api/v1/user_scores`    | [User Scores](user-scores.md) — fetch a user's moderation score             |
-| `POST /api/v1/gdpr/delete`   | [GDPR Deletion](gdpr.md) — delete a user's data                             |
-| Configured per Action        | [Handle Moderation Actions](actions.md) — receive action webhooks from Coop |
+| Endpoint                     | Description                                                                |
+| :--------------------------- | :------------------------------------------------------------------------- |
+| `POST /api/v1/items/async/`  | [Submit Items](items.md): send content for rule evaluation                 |
+| `POST /api/v1/report`        | [Report API](report.md): submit a user report                              |
+| `POST /api/v1/report/appeal` | [Appeal API](appeal.md): submit a user appeal                              |
+| `GET /api/v1/policies/`      | [Policies](policies.md): fetch your configured policies                    |
+| `GET /api/v1/user_scores`    | [User Scores](user-scores.md): fetch a user's moderation score             |
+| `POST /api/v1/gdpr/delete`   | [GDPR Deletion](gdpr.md): delete a user's data                             |
+| Configured per Action        | [Handle Moderation Actions](actions.md): receive action webhooks from Coop |
