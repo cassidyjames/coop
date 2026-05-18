@@ -4,50 +4,29 @@ Admins manage organization-wide configuration including items, actions, policies
 
 ## Item Types
 
-Item Types represent the different types of entities on your platform.
+Item Types represent the different types of entities on your platform. See [Concepts → Item Type](concepts.md#item-type) for details.
 
 ![Configuration of an Item Type: a post from the firehose with a schema of fields that get sent to Coop including text, unique ID as well as what format the fields are in](../images/coop-items.png)
-
-For example, a social network might have _Profile_, _Post_, _Comment_, and _Comment Thread_. A marketplace platform might include _Buyer_, _Seller_, _Product Listing_, _Product Review_, _Direct Message_, _Transaction_, etc. Every Item you send Coop needs to be an instance of exactly one of these Item Types.
 
 When creating an Item Type, define the schema to include which fields will be included and shown to reviewers. These fields are also available in any rule logic to connect with signals for routing or automation.
 
 ## Actions
 
-Actions represent any action you can perform on Items.
+Actions represent anything that can be performed on Items by proactive rules or moderator decisions. See [Concepts → Actions](concepts.md#actions) for details.
 
 ![Table of configured custom actions like: send warning, label as spam, delete content, delete account, ban email](../images/coop-actions.png)
 
-Some common examples include _Label_, _Send Warning_, _Delete_, _Ban_, _Mute_, _Approve_, etc.
+Actions are paired with API enpoints on your platform. See [Handling Actions](../api/actions.md) for technical details.
 
 ![Creating an action in Coop: add the name, description, what item types the action can run on, and a callback URL](../images/coop-define-action.png)
 
-For every Action you define in Coop, you have to expose the action through an API endpoint that can receive requests from Coop. Whenever your rules determine that some Item should receive an Action, Coop will send a POST request to the Action's API endpoint. When your server receives that POST request, your code should actually perform the corresponding action.
-
-![Two cards to set up API access to Google's Content Safety API and OpenAI's Moderation API](../images/coop-api-keys.png)
-Coop uses an API key to gate its endpoints. Use the UI to generate an API key to authenticate any requests Coop makes to your organization’s endpoints.
-
-## User Scores
-
-Coop tracks a score for each user based on their moderation history. Scores help moderators prioritize review—a low-scoring user's content can be routed to a stricter queue or automatically actioned.
-
-Each Action has a **penalty weight** (None, Low, Medium, High, or Severe), and each Policy also has a penalty weight. When a decision is made, Coop adds both weights to compute the combined penalty for that (Action, Policy) pair. Higher combined penalties push the user's score down faster.
-
-For the scoring formula, thresholds, and an example, see [User Score](concepts.md#user-score) in Basic Concepts.
-
 ## Policies
 
-Policies are categories of harm that are prohibited or monitored on your platform.
+Policies are the set of rules and guidelines that a platform uses to govern the conduct of its users. See [Concepts → Policy](concepts.md#policy) for details.
 
 ![Policy Dashboard showing 4 policies: Fraud, Nudity, Scams, Spam. There's a button to create new policies as well as options to add sub-policies for each existing policy and edit or delete them](../images/coop-policies.png)
 
-Some typical examples include _Spam_, _Nudity_, _Fraud_, _Violence_, etc. Policies can have sub-policies underneath them; for example, a _Spam_ policy could have sub-policies like _Commercial Spam_, _Repetitive Content_, _Fake Engagement_, and _Scams and Phishing_.
-
-It is often useful (and in some cases required by legislation such as the EU's Digital Services Act) to tie every action you take to one or more specific policies. For example, you could delete a comment under your _Nudity_ policy, or under your _Spam_ policy. Coop tracks those differences and measures how many actions you've taken per policy, so you can see how effectively you're enforcing each policy over time, identify gaps, and report to your team or to regulators.
-
-Policies added in Coop's UI are visible to reviewers directly in the review flow.
-
-Learn more about policies from the [Trust & Safety Professional Association](https://www.tspa.org/curriculum/ts-fundamentals/policy/policy-development/).
+Policies added in Coop's UI are visible to reviewers directly in the [Job view](review-console.md#job-view) of the Review Console.
 
 ## User management
 
