@@ -1,3 +1,4 @@
+blank_issues_enabled: false # maintainers can still file blank issues for convenience
 contact_links:
   - name: Discuss Coop
     about: "See previously-asked questions and existing discussions about Coop, or start your own"
